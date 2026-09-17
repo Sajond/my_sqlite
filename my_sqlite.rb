@@ -30,7 +30,7 @@ class MySqliteRequest
         @insert_values = {}
         @update_values = {}
     end 
-    #select types 
+    
     def from(table_name)
         @source_table = table_name
         self
@@ -54,12 +54,13 @@ class MySqliteRequest
         @join_target_column = column_on_db_b
         self
     end 
+
     def order(order, column_name)
         @order_direction = order 
         @order_column = column_name
         self
     end 
-#INSERT 
+
     def insert(table_name)
         @type_of_request = :insert
         @source_table = table_name
@@ -90,14 +91,9 @@ class MySqliteRequest
     def run 
         case @type_of_request
         when :select
-            result = build_requested_results()
-            #order || ORDER BY @order_column in @order_direction
-            if @order_column != nil
-                result = order_results(result)
-            end
 
-        result
-
+           run_select()
+        
         when :insert 
 
         when :update
@@ -112,19 +108,20 @@ end
 def _main()
     request = MySqliteRequest.new
     request = request.from('nba_player_data.csv')
-    request = request.select('name')
+    request = request.select('name', )
     request = request.where('college', 'University of Kansas')
-    request = request.order('hello', 'name') #use :ac or :desc for now NOT STRING
+   # request = request.order('asc', 'name') #use :ac or :desc for now NOT STRING
+    request = request.join('name','nba_players.csv', 'Player' )
     result = request.run
     result.each do |line| 
         puts "#{line}"
     end 
 end 
 
-def build_requested_results()
+def build_requested_results(rows)
     result = []
         puts "Asked for #{@filter_column} and #{@filter_value}" 
-        CSV.foreach(@source_table, headers: true) do |row|
+        rows.each do |row|
             if @filter_column == nil || row[@filter_column] == @filter_value
             matching_row = {}
             @selected_columns.each do |column| 
@@ -150,5 +147,48 @@ def order_results(result)
         sorted_result
 end
 
+def join_sources()
+    joined_result = []
+    join_rows = CSV.read(@join_table, headers: true)
+    join_lookup = {}
+
+        join_rows.each do |join_row|
+            join_lookup[join_row[@join_target_column]] = join_row
+        end
+
+    CSV.foreach(@source_table, headers: true) do |source_row|
+        join_row = join_lookup[source_row[@join_source_column]]
+
+        if join_row != nil
+
+                joined_row = {}
+                source_row.each do |column, value| 
+                    joined_row[column] = value
+                end
+                join_row.each do |column, value|
+                    joined_row[column] = value
+                end 
+                joined_result << joined_row
+        end
+    end
+    joined_result
+end 
+
+
+def run_select()
+   if @join_table != nil
+                rows = join_sources()
+            else 
+                rows = CSV.read(@source_table, headers: true)
+            end 
+            
+            result = build_requested_results(rows)
+            if @order_column != nil
+                result = order_results(result)
+            end
+
+        result
+end
 _main()
 
+#hash[key] = value
