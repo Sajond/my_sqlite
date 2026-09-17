@@ -35,74 +35,74 @@ class MySqliteRequest
         @source_table = table_name
         self
     end 
-
+    
     def select(column_name)
         @type_of_request = :select
         @selected_columns = Array(column_name)
         self
     end 
-
+    
     def where(column_name, criteria)
         @filter_column = column_name
         @filter_value = criteria
         self
     end 
-
+    
     def join(column_on_db_a, filename_db_b, column_on_db_b)
         @join_source_column = column_on_db_a
         @join_table = filename_db_b
         @join_target_column = column_on_db_b
         self
     end 
-
+    
     def order(order, column_name)
         @order_direction = order 
         @order_column = column_name
         self
     end 
-
+    
     def insert(table_name)
         @type_of_request = :insert
         @source_table = table_name
         self
     end 
-
+    
     def values(data)
         @insert_values = data
         self
     end 
-
+    
     def update(table_name)
         @type_of_request = :update
         @source_table = table_name
         self 
     end 
-
+    
     def set(data)
         @update_values = data
         self
     end 
-
+    
     def delete
         @type_of_request = :delete
         self
     end 
-
+    
     def run 
         case @type_of_request
         when :select
-
-           run_select()
-        
+            
+            run_select()
+            
         when :insert 
-
+            
         when :update
-
+            
         when :delete
         end 
-
+        
     end 
-
+    
 end
 
 def _main()
@@ -110,7 +110,7 @@ def _main()
     request = request.from('nba_player_data.csv')
     request = request.select('name', )
     request = request.where('college', 'University of Kansas')
-   # request = request.order('asc', 'name') #use :ac or :desc for now NOT STRING
+    # request = request.order('asc', 'name') #use :ac or :desc for now NOT STRING
     request = request.join('name','nba_players.csv', 'Player' )
     result = request.run
     result.each do |line| 
@@ -120,17 +120,17 @@ end
 
 def build_requested_results(rows)
     result = []
-        puts "Asked for #{@filter_column} and #{@filter_value}" 
-        rows.each do |row|
-            if @filter_column == nil || row[@filter_column] == @filter_value
+    puts "Asked for #{@filter_column} and #{@filter_value}" 
+    rows.each do |row|
+        if @filter_column == nil || row[@filter_column] == @filter_value
             matching_row = {}
             @selected_columns.each do |column| 
-            matching_row[column] = row[column]
+                matching_row[column] = row[column]
             end
             result << matching_row
         end
     end 
-  result
+    result
 end
 
 #typo in qwasar? order to be ASC or Description? (DESC)
@@ -139,36 +139,36 @@ def order_results(result)
     sorted_result = result.sort_by do |row|
         row[@order_column]
     end
-
-     if @order_direction == :desc || @order_direction == :description
+    
+    if @order_direction == :desc || @order_direction == :description
         sorted_result = sorted_result.reverse 
-     end
-
-        sorted_result
+    end
+    
+    sorted_result
 end
 
 def join_sources()
     joined_result = []
     join_rows = CSV.read(@join_table, headers: true)
     join_lookup = {}
-
-        join_rows.each do |join_row|
-            join_lookup[join_row[@join_target_column]] = join_row
-        end
-
+    
+    join_rows.each do |join_row|
+        join_lookup[join_row[@join_target_column]] = join_row
+    end
+    
     CSV.foreach(@source_table, headers: true) do |source_row|
         join_row = join_lookup[source_row[@join_source_column]]
-
+        
         if join_row != nil
-
-                joined_row = {}
-                source_row.each do |column, value| 
-                    joined_row[column] = value
-                end
-                join_row.each do |column, value|
-                    joined_row[column] = value
-                end 
-                joined_result << joined_row
+            
+            joined_row = {}
+            source_row.each do |column, value| 
+                joined_row[column] = value
+            end
+            join_row.each do |column, value|
+                joined_row[column] = value
+            end 
+            joined_result << joined_row
         end
     end
     joined_result
@@ -176,18 +176,18 @@ end
 
 
 def run_select()
-   if @join_table != nil
-                rows = join_sources()
-            else 
-                rows = CSV.read(@source_table, headers: true)
-            end 
-            
-            result = build_requested_results(rows)
-            if @order_column != nil
-                result = order_results(result)
-            end
-
-        result
+    if @join_table != nil
+        rows = join_sources()
+    else 
+        rows = CSV.read(@source_table, headers: true)
+    end 
+    
+    result = build_requested_results(rows)
+    if @order_column != nil
+        result = order_results(result)
+    end
+    
+    result
 end
 _main()
 
