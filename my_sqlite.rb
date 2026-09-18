@@ -108,10 +108,10 @@ end
 def _main()
     request = MySqliteRequest.new
     request = request.from('nba_player_data.csv')
-    request = request.select('name', )
-    request = request.where('college', 'University of Kansas')
+    request = request.select('*', )
+    request = request.where('year_start', '1982')
     # request = request.order('asc', 'name') #use :ac or :desc for now NOT STRING
-    request = request.join('name','nba_players.csv', 'Player' )
+    #request = request.join('name','nba_players.csv', 'Player' )
     result = request.run
     result.each do |line| 
         puts "#{line}"
@@ -124,8 +124,15 @@ def build_requested_results(rows)
     rows.each do |row|
         if @filter_column == nil || row[@filter_column] == @filter_value
             matching_row = {}
-            @selected_columns.each do |column| 
-                matching_row[column] = row[column]
+            
+            if @selected_columns[0] == '*'
+                row.each do |column, value|
+                    matching_row[column] = value
+                end
+            else
+                @selected_columns.each do |column| 
+                    matching_row[column] = row[column]
+                end 
             end
             result << matching_row
         end
@@ -192,3 +199,19 @@ end
 _main()
 
 #hash[key] = value
+
+=begin
+
+MySQLite TODO
+Clean/test SELECT
+Add SELECT *
+Finish/test JOIN
+Implement INSERT
+Implement UPDATE
+Implement DELETE
+Test all Part 00 methods
+Clean up code
+Build Part 01 CLI
+Final testing
+
+=end
