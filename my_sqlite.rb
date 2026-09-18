@@ -60,7 +60,7 @@ class MySqliteRequest
         @order_column = column_name
         self
     end 
-    
+    #---------------------------------------
     def insert(table_name)
         @type_of_request = :insert
         @source_table = table_name
@@ -71,6 +71,7 @@ class MySqliteRequest
         @insert_values = data
         self
     end 
+    #---------------------------------------
     
     def update(table_name)
         @type_of_request = :update
@@ -92,9 +93,15 @@ class MySqliteRequest
         case @type_of_request
         when :select
             
-            run_select()
+            result = run_select()
+
+            #todo debugging print to see ouput remove before testing 
+            result.each do |line| 
+                puts "#{line}"
+            end 
             
         when :insert 
+            run_insert()
             
         when :update
             
@@ -107,15 +114,15 @@ end
 
 def _main()
     request = MySqliteRequest.new
-    request = request.from('nba_player_data.csv')
-    request = request.select('*', )
-    request = request.where('year_start', '1982')
+    request = request.from('test.csv')
+    #request = request.select('*', )
+    #request = request.where('year_start', '1982')
     # request = request.order('asc', 'name') #use :ac or :desc for now NOT STRING
     #request = request.join('name','nba_players.csv', 'Player' )
+    request = request.insert('test.csv')
+    request = request.values({"name" => "Sam", "year_start" => "120", "position" => "Missionary"})
     result = request.run
-    result.each do |line| 
-        puts "#{line}"
-    end 
+    
 end 
 
 def build_requested_results(rows)
@@ -196,7 +203,35 @@ def run_select()
     
     result
 end
+
+#TODO decide what happens when the CSV has a header that is missing from the input Hash.
+#table name can be any csv we have
+def build_new_row()
+    data_to_insert= @insert_values
+    new_row = []
+    
+    headers = CSV.foreach(@source_table).first
+    headers.each do |current_header|
+        new_row << data_to_insert[current_header]
+    end
+    new_row
+end
+
+def append_new_row(new_row)
+    CSV.open(@source_table, "a") do |csv_to_insert| 
+        csv_to_insert << new_row
+    end
+end 
+
+def run_insert()
+    row_to_append = build_new_row()
+    append_new_row(row_to_append)
+end 
+
+
 _main()
+
+
 
 #hash[key] = value
 
@@ -213,5 +248,21 @@ Test all Part 00 methods
 Clean up code
 Build Part 01 CLI
 Final testing
+
+@source_table       → String        → "nba_player_data.csv"
+
+@selected_columns   → Array         → ["name", "height"]
+
+@filter_column      → String / nil  → "college"
+
+@filter_value       → String / nil  → "University of Kansas"
+
+rows                → collection    → many CSV rows
+
+row                 → CSV::Row      → one player's row
+
+matching_row        → Hash          → {"name"=>"...", "height"=>"..."}
+
+result              → Array         → many matching_row hashes
 
 =end
