@@ -107,6 +107,7 @@ class MySqliteRequest
             run_update()
             
         when :delete
+            run_delete()
         end 
         
     end 
@@ -114,7 +115,7 @@ class MySqliteRequest
 end
 
 def _main()
-    request = MySqliteRequest.new
+    #request = MySqliteRequest.new
     #------------------------select---------------------
     #request = request.from('test.csv')
     #request = request.select('*')
@@ -129,11 +130,22 @@ def _main()
     #request = request.values({"name" => "Sam", "year_start" => "120", "position" => "Missionary"})
     
     #------------------------update---------------------
-    request = request.update('small_test.csv')
-    request = request.set( "name" => "voldemort")
+    #request = request.update('small_test.csv')
+    #request = request.set( "name" => "voldemort")
     #request = request.where('year_start', '2024')
     
-    result = request.run
+    #------------------------delete---------------------
+    #request = request.from('small_test.csv')
+    #request = request.where('college', 'Duke University')
+    #request = request.delete()
+    #result = request.run
+
+    #chain test
+    MySqliteRequest.new
+    .from('test.csv')
+    .select('*')
+    .where('name', 'Test Player')
+    .run
     
 end 
 
@@ -240,10 +252,6 @@ def run_insert()
     append_new_row(row_to_append)
 end 
 
-
-
-
-
 #returns modified rows based on the set(data)insert values
 def update_rows()
     data_for_update = @update_values
@@ -275,7 +283,41 @@ def rewrite_csv_rows(updated_rows)
     end
 end
 
-_main()
+
+
+def build_preserved_rows()
+    rows = CSV.read(@source_table, headers: true)
+    preserved_rows = []
+    rows.each do |row| 
+        #rows marked for deletion 
+        if @filter_column == nil || row[@filter_column] == @filter_value
+        else 
+            #not marked for deletion = add to preservation 
+            preserved_rows << row
+        end
+    end
+    preserved_rows
+end
+
+#! header preservation wont work, check update method
+def write_preserved_rows(preserved_rows)
+    headers = CSV.foreach(@source_table).first
+    CSV.open(@source_table, "w") do |new_csv|
+        new_csv << headers
+        preserved_rows.each do |row|
+            new_csv << row.fields
+        end
+    end
+end
+
+def run_delete()
+    preserved_rows = build_preserved_rows()
+    write_preserved_rows(preserved_rows)
+end
+
+if __FILE__ == $PROGRAM_NAME
+    _main
+end
 #? UPDATE
 #? can change multiple columns in a single update, no where = all, where/ specific
 
