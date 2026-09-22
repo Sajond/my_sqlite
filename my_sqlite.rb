@@ -83,7 +83,7 @@ class MySqliteRequest
         @update_values = data
         self
     end 
-    
+    #-----------------------------------------
     def delete
         @type_of_request = :delete
         self
@@ -94,7 +94,7 @@ class MySqliteRequest
         when :select
             
             result = run_select()
-
+            
             #todo debugging print to see ouput remove before testing 
             result.each do |line| 
                 puts "#{line}"
@@ -104,6 +104,7 @@ class MySqliteRequest
             run_insert()
             
         when :update
+            run_update()
             
         when :delete
         end 
@@ -114,13 +115,24 @@ end
 
 def _main()
     request = MySqliteRequest.new
-    request = request.from('test.csv')
-    #request = request.select('*', )
-    #request = request.where('year_start', '1982')
+    #------------------------select---------------------
+    #request = request.from('test.csv')
+    #request = request.select('*')
+    #request = request.where('weight', '300')
+    
+    #------------------------join---------------------
     # request = request.order('asc', 'name') #use :ac or :desc for now NOT STRING
     #request = request.join('name','nba_players.csv', 'Player' )
-    request = request.insert('test.csv')
-    request = request.values({"name" => "Sam", "year_start" => "120", "position" => "Missionary"})
+    
+    #------------------------insert---------------------
+    #request = request.insert('test.csv')
+    #request = request.values({"name" => "Sam", "year_start" => "120", "position" => "Missionary"})
+    
+    #------------------------update---------------------
+    request = request.update('small_test.csv')
+    request = request.set( "name" => "voldemort")
+    #request = request.where('year_start', '2024')
+    
     result = request.run
     
 end 
@@ -229,13 +241,53 @@ def run_insert()
 end 
 
 
+
+
+
+#returns modified rows based on the set(data)insert values
+def update_rows()
+    data_for_update = @update_values
+    rows = CSV.read(@source_table, headers: true)
+    #change all or change row
+    rows.each do |row|
+        if @filter_column == nil || row[@filter_column] == @filter_value
+            #change row logic
+            data_for_update.each do |column, value| 
+                row[column] = value
+            end
+            
+        end 
+    end
+    rows
+end 
+
+def run_update()
+    updated_rows = update_rows()
+    rewrite_csv_rows(updated_rows)
+end 
+
+def rewrite_csv_rows(updated_rows)
+    CSV.open(@source_table, "w") do |new_csv|
+        new_csv << updated_rows.headers
+        updated_rows.each do |row|
+            new_csv << row.fields
+        end
+    end
+end
+
 _main()
+#? UPDATE
+#? can change multiple columns in a single update, no where = all, where/ specific
 
+=begin read the existing CSV rows.
 
+For each row, determine whether it matches WHERE. If there is no WHERE, every row matches.
 
+For each matching row, apply the column/value pairs from set(data). Preserve all unspecified columns.
+
+Write the resulting rows back to the CSV.
 #hash[key] = value
 
-=begin
 
 MySQLite TODO
 Clean/test SELECT
@@ -266,3 +318,4 @@ matching_row        → Hash          → {"name"=>"...", "height"=>"..."}
 result              → Array         → many matching_row hashes
 
 =end
+#todo project states each row must have an ID? -to check
