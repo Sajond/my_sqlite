@@ -35,9 +35,8 @@ def cli_loop()
     break if input.nil? || input.strip == "quit"
     next if input.strip.empty?
     tokens = tokenise_input(input)
-    tokens.each do |token| 
-      puts "#{token}"
-    end 
+    request = build_request()
+    parse_tokens(tokens, request)
   end 
 end
 
@@ -47,6 +46,7 @@ def tokenise_input(input)
   corrected_tokens = []
   correct_tokens(tokens, corrected_tokens)
   corrected_tokens
+  
 end 
 
 
@@ -71,6 +71,105 @@ def correct_tokens(tokens, corrected_tokens)
     end
   end
 end
+
+def build_request()
+  request = MySqliteRequest.new
+end 
+
+def parse_tokens(tokens, request)
+  #todo implement a stage
+  index = 0
+  current_command = nil #SELECT, UP, DEL 
+  parsing_stage = nil
+  
+  while index < tokens.length
+    case tokens[index]
+      
+    when 'SELECT'
+      if current_command.nil? 
+        current_command = 'SELECT'
+      else 
+        return false
+      end 
+      
+      result = process_select(request, tokens, index)
+      return false if result == false 
+      index = result
+    
+    when 'WHERE'
+      
+    when 'FROM'
+      if (current_command == 'SELECT' || current_command == 'DELETE')  && 
+        parsing_stage == current_command
+        
+        result = process_from(request, tokens, index)
+        return false if result == false 
+        parsing_stage = 'FROM'
+        index = result
+
+      else 
+        return false 
+      end 
+      
+    when 'JOIN'
+      
+    when 'UPDATE'
+      
+    when 'INSERT'
+      
+    when 'SET'
+      
+    when 'DELETE'
+      
+    when 'ORDER' #by is +1 index
+      
+    when ';'
+    end
+  end 
+  
+end 
+
 main()
+
+def process_select(request, tokens, index)
+  column_names = []
+  index += 1 
+  if tokens[index] == 'FROM'
+    puts 'Select value invalid'
+    return false 
+  end 
+  
+  #todo Add '*' handling
+  #todo SQL validation for malformed input?
+  while tokens[index] != 'FROM'
+    if tokens[index] == ','
+      #do nothing
+    elsif tokens[index].nil? || tokens[index] == ';'
+      return false
+    else
+      column_names << tokens[index]
+    end 
+    index += 1
+  end 
+  request.select(column_names) 
+  index
+end 
+
+def process_from(request, tokens, index)
+  if tokens[index] == 'FROM'
+    index += 1
+  else 
+    puts 'Expected FROM'
+    return false
+  end 
+  
+  if tokens[index].nil? || tokens[index] == ';'
+    return false 
+  else 
+    request.from(tokens[index])
+    index += 1
+  end
+  index
+end 
 
 
