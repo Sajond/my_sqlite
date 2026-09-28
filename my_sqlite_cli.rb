@@ -35,8 +35,16 @@ def cli_loop()
     break if input.nil? || input.strip == "quit"
     next if input.strip.empty?
     tokens = tokenise_input(input)
+    p tokens
     request = build_request()
-    parse_tokens(tokens, request)
+    
+    success = parse_tokens(tokens, request)
+    if success != true 
+      puts 'Parsing failed'
+      next 
+    end 
+
+    result = request.run
   end 
 end
 
@@ -77,17 +85,18 @@ def build_request()
 end 
 
 def parse_tokens(tokens, request)
-  #todo implement a stage
   index = 0
   current_command = nil #SELECT, UP, DEL 
   parsing_stage = nil
   
   while index < tokens.length
+    #p [index, tokens[index], current_command, parsing_stage]
     case tokens[index]
       
     when 'SELECT'
       if current_command.nil? 
         current_command = 'SELECT'
+        parsing_stage = 'SELECT'
       else 
         return false
       end 
@@ -124,12 +133,17 @@ def parse_tokens(tokens, request)
     when 'ORDER' #by is +1 index
       
     when ';'
+      #todo add completeness check for the semicolon, but now end of statement 
+      if index + 1 == tokens.length 
+        break
+      end 
     end
+    
   end 
-  
+  true 
 end 
 
-main()
+
 
 def process_select(request, tokens, index)
   column_names = []
@@ -173,3 +187,4 @@ def process_from(request, tokens, index)
 end 
 
 
+main()

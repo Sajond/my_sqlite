@@ -95,7 +95,7 @@ class MySqliteRequest
             
             result = run_select()
             
-            #todo debugging print to see ouput remove before testing 
+            #todo remove this and allow CLI loop to handle output
             result.each do |line| 
                 puts "#{line}"
             end 
@@ -151,7 +151,7 @@ end
 
 def build_requested_results(rows)
     result = []
-    puts "Asked for #{@filter_column} and #{@filter_value}" 
+    #puts "Asked for #{@filter_column} and #{@filter_value}" 
     rows.each do |row|
         if @filter_column == nil || row[@filter_column] == @filter_value
             matching_row = {}
