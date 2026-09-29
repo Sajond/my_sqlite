@@ -2,6 +2,7 @@
 require_relative 'my_sqlite_request'
 require 'readline'
 
+
 def main()
   usage_message()
   validate_file()
@@ -43,7 +44,7 @@ def cli_loop()
       puts 'Parsing failed'
       next 
     end 
-
+    
     result = request.run
   end 
 end
@@ -104,8 +105,19 @@ def parse_tokens(tokens, request)
       result = process_select(request, tokens, index)
       return false if result == false 
       index = result
-    
+      
     when 'WHERE'
+      if((current_command == 'SELECT' || current_command == 'DELETE') && parsing_stage == 'FROM') ||
+        (current_command == 'UPDATE' && parsing_stage == 'SET')
+        
+        #process where
+        result = process_where(request, tokens, index)
+        return false if result == false
+        parsing_stage = 'WHERE'
+        index = result
+      else 
+        return false
+      end 
       
     when 'FROM'
       if (current_command == 'SELECT' || current_command == 'DELETE')  && 
@@ -115,7 +127,7 @@ def parse_tokens(tokens, request)
         return false if result == false 
         parsing_stage = 'FROM'
         index = result
-
+        
       else 
         return false 
       end 
@@ -186,5 +198,20 @@ def process_from(request, tokens, index)
   index
 end 
 
+def process_where(request, tokens, index)
+  #for value after = the '' prefix and suffix must be .delete_suf/pref to be passed correctly
+  #fixed value of 3 indexes so return 4th for next arg
+  return false if tokens[index] != 'WHERE'
+  return false if tokens[index + 1] == nil || tokens[index + 1] == ';'
+  return false if tokens[index + 2] != '='
+  return false if tokens[index + 3] == nil || tokens[index + 3] == ';'
+  filter_column = tokens[index + 1]
+  filter_value = tokens[index + 3]
+  filter_value = filter_value.delete_prefix("'").delete_suffix("'")
+  request.where(filter_column, filter_value)
+  index += 4
+  index
+  #todo current acceptance of index 3 value without " ' " check and add
+end 
 
 main()
