@@ -134,13 +134,41 @@ def parse_tokens(tokens, request)
       
     when 'JOIN'
       
+      #add a check to ensure update is followed by SET?
     when 'UPDATE'
+      if current_command.nil? 
+        current_command = 'UPDATE'
+        parsing_stage = 'UPDATE'
+        result = process_update(request, tokens, index)
+        return false if result == false 
+        index = result 
+      else 
+        return false
+      end 
       
     when 'INSERT'
       
     when 'SET'
+      if current_command == 'UPDATE'
+        result = process_set(request, tokens, index)
+        return false if result == false
+        parsing_stage = 'SET'
+        index = result 
+      else 
+        return false 
+      end 
+
       
     when 'DELETE'
+      if current_command.nil? 
+        current_command = 'DELETE'
+        parsing_stage = 'DELETE'
+        result = process_delete(request, tokens, index)
+        return false if result == false 
+        index = result
+      else 
+        return false
+      end 
       
     when 'ORDER' #by is +1 index
       
@@ -150,7 +178,6 @@ def parse_tokens(tokens, request)
         break
       end 
     end
-    
   end 
   true 
 end 
@@ -165,7 +192,6 @@ def process_select(request, tokens, index)
     return false 
   end 
   
-  #todo Add '*' handling
   #todo SQL validation for malformed input?
   while tokens[index] != 'FROM'
     if tokens[index] == ','
@@ -212,6 +238,79 @@ def process_where(request, tokens, index)
   index += 4
   index
   #todo current acceptance of index 3 value without " ' " check and add
+end 
+
+def process_delete(request, tokens, index)
+  return false if tokens[index] != 'DELETE'
+  return false if tokens[index + 1] != 'FROM'
+  request.delete
+  index + 1
+end 
+
+def process_update(request, tokens, index )
+    if tokens[index] == 'UPDATE'
+    index += 1
+  else 
+    puts 'Expected: UPDATE'
+    return false
+  end 
+
+  if tokens[index].nil? || tokens[index] == ';'
+    return false 
+  else 
+    request.update(tokens[index])
+    index += 1
+  end
+  index
+end 
+
+def process_set(request, tokens, index)
+  if tokens[index] == 'SET'
+    index += 1 
+  else 
+    puts 'Expected: SET'
+    return false
+  end 
+
+  if tokens[index].nil? || tokens[index] == ';'
+    return false 
+  end 
+
+  set_values = {}
+  result = collect_data_values(set_values, tokens, index)
+  return false if result == false
+  request.set(set_values)
+  index = result 
+  index
+end 
+
+#todo: fix issues of acceptin leading comma in input e.g. SET , name = 'Sam'
+#todo: check if input value must be surrounded by "'value'"
+def collect_data_values(set_values,tokens, index)
+  while tokens[index] != 'WHERE' && tokens[index] != ';'
+    #collect the data into a hash 
+    if tokens[index].nil? 
+      return false
+    end
+
+    if tokens[index] == ','
+      index += 1
+    end 
+    
+    if tokens[index + 1 ] != '='
+      puts 'Expected; Column = value'
+      return false
+    end 
+
+    if tokens[index + 2].nil? || tokens[index + 2] == ';'
+      return false 
+    else 
+      set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
+      index += 3
+    end 
+    
+  end
+  index
 end 
 
 main()
