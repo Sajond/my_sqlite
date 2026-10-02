@@ -231,6 +231,7 @@ def process_where(request, tokens, index)
   return false if tokens[index + 1] == nil || tokens[index + 1] == ';'
   return false if tokens[index + 2] != '='
   return false if tokens[index + 3] == nil || tokens[index + 3] == ';'
+  return false if !valid_word_format(tokens[index + 3])
   filter_column = tokens[index + 1]
   filter_value = tokens[index + 3]
   filter_value = filter_value.delete_prefix("'").delete_suffix("'")
@@ -265,10 +266,10 @@ def process_update(request, tokens, index )
 end 
 
 def process_set(request, tokens, index)
-  if tokens[index] == 'SET'
+  if tokens[index] == 'SET' && tokens[index + 1] != ','
     index += 1 
   else 
-    puts 'Expected: SET'
+    puts 'Expected: SET <value name>'
     return false
   end 
 
@@ -284,8 +285,6 @@ def process_set(request, tokens, index)
   index
 end 
 
-#todo: fix issues of acceptin leading comma in input e.g. SET , name = 'Sam'
-#todo: check if input value must be surrounded by "'value'"
 def collect_data_values(set_values,tokens, index)
   while tokens[index] != 'WHERE' && tokens[index] != ';'
     #collect the data into a hash 
@@ -304,6 +303,8 @@ def collect_data_values(set_values,tokens, index)
 
     if tokens[index + 2].nil? || tokens[index + 2] == ';'
       return false 
+    elsif !valid_word_format(tokens[index + 2]) 
+      return false 
     else 
       set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
       index += 3
@@ -311,6 +312,15 @@ def collect_data_values(set_values,tokens, index)
     
   end
   index
+end 
+
+def valid_word_format(input)
+  if !input.start_with?("'") || !input.end_with?("'")
+    puts 'values must be surrounded by single quotes'
+    return false 
+  else 
+    return true 
+  end 
 end 
 
 main()
