@@ -58,21 +58,25 @@ def tokenise_input(input)
   
 end 
 
-
+#handles quoted data""
 def correct_tokens(tokens, corrected_tokens)
   inside_quote = false
   combined = nil
   
   tokens.each do |token|
-    if token.start_with?("'") && !token.end_with?("'")
-      combined = token.dup
+    if token.start_with?("'", '"') && !token.end_with?("'",'"')
+      combined = token.dup.delete_prefix('"').delete_prefix("'")
       inside_quote = true
+      #middle token branch
+    elsif inside_quote == true && !token.start_with?("'",'"') && !token.end_with?("'",'"')
+      if token == ","
+        combined << token
+      else  
+        combined << " " << token
+      end 
       
-    elsif inside_quote == true && !token.start_with?("'") && !token.end_with?("'")
-      combined << " " << token 
-      
-    elsif  inside_quote == true && token.end_with?("'")
-      combined << " " << token
+    elsif  inside_quote == true && token.end_with?("'",'"')
+      combined << " " << token.delete_suffix('"').delete_suffix("'")
       corrected_tokens << combined
       inside_quote = false
     else 
