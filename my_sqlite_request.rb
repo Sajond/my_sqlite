@@ -229,14 +229,14 @@ def run_select()
 end
 
 #TODO decide what happens when the CSV has a header that is missing from the input Hash.
-#table name can be any csv we have
+#changed to accept an array value as example in specs passed as array not hash, same as standard SQL behaviour for insert values
 def build_new_row()
     data_to_insert= @insert_values
     new_row = []
     
     headers = CSV.foreach(@source_table).first
-    headers.each do |current_header|
-        new_row << data_to_insert[current_header]
+    headers.each_with_index do |current_header, index|
+        new_row << data_to_insert[index]
     end
     new_row
 end
@@ -248,6 +248,8 @@ def append_new_row(new_row)
 end 
 
 def run_insert()
+    p @insert_values
+    
     row_to_append = build_new_row()
     append_new_row(row_to_append)
 end 

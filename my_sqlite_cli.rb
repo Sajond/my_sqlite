@@ -50,7 +50,7 @@ def cli_loop()
 end
 
 def tokenise_input(input)
-  formatted_input = input.gsub(",", " , ").gsub(";", " ; ")
+  formatted_input = input.gsub(",", " , ").gsub(";", " ; ").gsub("(", " ( ").gsub(")", " ) ")
   tokens = formatted_input.split
   corrected_tokens = []
   correct_tokens(tokens, corrected_tokens)
@@ -147,6 +147,15 @@ def parse_tokens(tokens, request)
       end 
       
     when 'INSERT'
+      if current_command.nil? 
+        current_command = 'INSERT'
+        parsing_stage = 'INSERT'
+        result = process_insert(request, tokens, index)
+        return false if result == false
+        index = result
+      else 
+        return false 
+      end 
       
     when 'SET'
       if current_command == 'UPDATE'
@@ -171,7 +180,17 @@ def parse_tokens(tokens, request)
       end 
       
     when 'ORDER' #by is +1 index
-      
+
+    when 'VALUES'
+      if current_command == 'INSERT' && parsing_stage == 'INSERT'
+        result = process_values(request, tokens, index)
+        return false if result == false 
+        parsing_stage = 'VALUES'
+        index = result
+      else 
+        return false
+      end 
+        
     when ';'
       #todo add completeness check for the semicolon, but now end of statement 
       if index + 1 == tokens.length 
@@ -322,5 +341,57 @@ def valid_word_format(input)
     return true 
   end 
 end 
+#check this indexing
+def process_insert(request, tokens, index)
+  if tokens[index] == 'INSERT' && tokens[index + 1] == 'INTO'
+  index += 2
+  else 
+    puts 'Usage: INSERT INTO'
+    return false
+  end 
+  #insert body 
+  if tokens[index] == nil || tokens[index] == ';'
+    return false 
+  else 
+  request.insert(tokens[index])
+  index += 1 
+  end 
+end 
+
+
+def process_values(request, tokens, index)
+  if tokens[index] == 'VALUES' && tokens[index + 1] == '('
+    index += 1 #pointing now to (
+  else 
+    puts 'Expected: VALUES ( '
+    return false
+  end 
+  return false if tokens[index] == nil || tokens[index] == ';'
+  
+  values = []
+  result = collect_insert_values(values, tokens, index)
+  p values
+  return false if result == false 
+  request.values(values)
+  index = result 
+  index
+end 
+
+
+def collect_insert_values(values, tokens, index)
+  while tokens[index] != ')'
+    if tokens[index] == nil || tokens[index] == ';'
+      return false
+    end 
+
+    if tokens[index] != '(' && tokens[index] != ','
+      values << tokens[index]
+    end 
+    index += 1
+  end 
+  index += 1 #else parser hangs on ')'
+end 
+
+  
 
 main()
