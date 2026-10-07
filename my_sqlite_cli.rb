@@ -191,6 +191,7 @@ def process_select(request, tokens, index)
     elsif tokens[index].nil? || tokens[index] == ';'
       return false
     else
+      return false unless valid_select_column?(tokens[index])
       column_names << tokens[index]
     end 
     index += 1
@@ -342,7 +343,6 @@ def process_values(request, tokens, index)
   
   values = []
   result = collect_insert_values(values, tokens, index)
-  p values
   return false if result == false 
   request.values(values)
   index = result 
@@ -547,6 +547,9 @@ def values(current_command, parsing_stage, request, tokens, index)
   end 
 end 
 
-
+def valid_select_column?(token)
+  invalid = ['WHERE', 'ORDER', 'JOIN', 'UPDATE', 'DELETE', 'INSERT', 'SET', 'VALUES']
+  !invalid.include?(token)
+end
 
 main()
