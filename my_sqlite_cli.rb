@@ -111,7 +111,7 @@ def parse_tokens(tokens, request)
       index = result
       
     when 'WHERE'
-      if((current_command == 'SELECT' || current_command == 'DELETE') && parsing_stage == 'FROM') ||
+      if((current_command == 'SELECT' || current_command == 'DELETE') && parsing_stage == 'FROM' || parsing_stage == 'JOIN') ||
         (current_command == 'UPDATE' && parsing_stage == 'SET')
         
         #process where
@@ -125,8 +125,7 @@ def parse_tokens(tokens, request)
       
     when 'FROM'
       if (current_command == 'SELECT' || current_command == 'DELETE')  && 
-        parsing_stage == current_command
-        
+        parsing_stage == current_command 
         result = process_from(request, tokens, index)
         return false if result == false 
         parsing_stage = 'FROM'
@@ -137,8 +136,17 @@ def parse_tokens(tokens, request)
       end 
       
     when 'JOIN'
+      #JOIN table ON column_ a = column_b (only comes from SELECT)
+      if current_command == 'SELECT' && parsing_stage == 'FROM'
+        result = process_join(request, tokens, index)
+        return false if result == false
+        parsing_stage = 'JOIN'
+        index = result
+      else 
+        return false 
+      end 
+
       
-      #add a check to ensure update is followed by SET?
     when 'UPDATE'
       if current_command.nil? 
         current_command = 'UPDATE'
@@ -185,7 +193,7 @@ def parse_tokens(tokens, request)
       
       #todo: Test order by functionality
     when 'ORDER' #by is +1 index
-      if current_command == 'SELECT' && (parsing_stage == 'FROM' || parsing_stage == 'WHERE')
+      if current_command == 'SELECT' && (parsing_stage == 'FROM' || parsing_stage == 'WHERE' || parsing_stage == 'JOIN')
         parsing_stage = ' ORDER'
         result = process_order(request, tokens, index)
         return false if result == false
@@ -439,4 +447,36 @@ def process_order(request, tokens, index)
 
 end 
 
+#JOIN table ON column_ a = column_b (only comes from SELECT)
+
+def process_join(request, tokens, index)
+  if tokens[index] == 'JOIN' && tokens[index + 2] == 'ON' && tokens[index + 4] == '='
+    index += 1 
+  else 
+    puts 'USAGE: JOIN <table_name_b> ON <column_db_a> = <column_db_b>'
+    return false
+  end 
+
+  table_name_b = is_valid_data(tokens[index])
+  return false if table_name_b == false 
+  index += 2
+
+  column_db_a = is_valid_data(tokens[index])
+  return false if column_db_a == false 
+  index += 2
+
+  column_db_b = is_valid_data(tokens[index])
+  return false if column_db_b == false 
+  index += 1
+  request.join(column_db_a, table_name_b, column_db_b)
+  index
+end 
+
+  def is_valid_data(position)
+    if position.nil? || position == ';'
+      return false 
+    else 
+      return position
+    end 
+  end 
 main()
