@@ -215,12 +215,11 @@ def process_from(request, tokens, index)
     return false
   end 
   
-  if tokens[index].nil? || tokens[index] == ';'
-    return false 
-  else 
-    request.from(tokens[index])
-    index += 1
-  end
+  return false unless is_valid_data(tokens[index])
+  
+  request.from(tokens[index])
+  index += 1
+  
   index
 end 
 
@@ -255,12 +254,11 @@ def process_update(request, tokens, index )
     return false
   end 
   
-  if tokens[index].nil? || tokens[index] == ';'
-    return false 
-  else 
-    request.update(tokens[index])
-    index += 1
-  end
+  return false unless is_valid_data(tokens[index])
+  
+  request.update(tokens[index])
+  index += 1
+  
   index
 end 
 
@@ -272,9 +270,7 @@ def process_set(request, tokens, index)
     return false
   end 
   
-  if tokens[index].nil? || tokens[index] == ';'
-    return false 
-  end 
+  return false unless is_valid_data(tokens[index])
   
   set_values = {}
   result = collect_data_values(set_values, tokens, index)
@@ -415,14 +411,11 @@ def collect_data_values(set_values,tokens, index)
       return false
     end 
     
-    if tokens[index + 2].nil? || tokens[index + 2] == ';'
-      return false 
-    elsif !valid_word_format(tokens[index + 2]) 
-      return false 
-    else 
-      set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
-      index += 3
-    end 
+    return false unless is_valid_data(tokens[index + 2])
+    return false unless valid_word_format(tokens[index + 2])
+    
+    set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
+    index += 3
     
   end
   index
