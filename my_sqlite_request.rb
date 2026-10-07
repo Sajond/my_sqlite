@@ -94,6 +94,7 @@ class MySqliteRequest
         when :select
             
             result = run_select()
+            return false if result == false
             
             result.each do |line| 
                 puts line.values.join("|")
@@ -214,7 +215,9 @@ def run_select()
     else 
         rows = CSV.read(@source_table, headers: true)
     end 
-    
+
+    return false unless check_column_names(rows)
+
     result = build_requested_results(rows)
     if @order_column != nil
         result = order_results(result)
@@ -310,6 +313,25 @@ end
 def run_delete()
     preserved_rows = build_preserved_rows()
     write_preserved_rows(preserved_rows)
+end
+
+def check_column_names(rows)
+  return true if rows.empty?
+
+  if rows.first.is_a?(CSV::Row)
+    headers = rows.first.headers
+  else
+    headers = rows.first.keys
+  end
+
+  @selected_columns.each do |column|
+    unless headers.include?(column) || column == "*"
+      puts "Column #{column} doesn't exist"
+      return false
+    end
+  end
+
+  true
 end
 
 if __FILE__ == $PROGRAM_NAME
