@@ -100,7 +100,6 @@ class MySqliteRequest
     
 end
 
-
 def build_requested_results(rows)
     result = []
     #puts "Asked for #{@filter_column} and #{@filter_value}" 
@@ -123,7 +122,7 @@ def build_requested_results(rows)
     result
 end
 
-#typo in qwasar? order to be ASC or Description? (DESC)
+#typo in qwasar? order to be ASC or Description? (DESC) accepts both for PROJ
 def order_results(result)
     
     sorted_result = result.sort_by do |row|
@@ -182,7 +181,6 @@ def run_select()
     result
 end
 
-#TODO decide what happens when the CSV has a header that is missing from the input Hash.
 #changed to accept an array value as example in specs passed as array not hash, same as standard SQL behaviour for insert values
 def build_new_row()
     data_to_insert= @insert_values
@@ -208,7 +206,6 @@ def run_insert()
     append_new_row(row_to_append)
 end 
 
-#returns modified rows based on the set(data)insert values
 def update_rows()
     data_for_update = @update_values
     rows = CSV.read(@source_table, headers: true)
@@ -243,8 +240,6 @@ def rewrite_csv_rows(updated_rows)
     end
 end
 
-
-
 def build_preserved_rows()
     rows = CSV.read(@source_table, headers: true)
     preserved_rows = []
@@ -259,7 +254,6 @@ def build_preserved_rows()
     preserved_rows
 end
 
-#! header preservation wont work, check update method
 def write_preserved_rows(preserved_rows)
     headers = CSV.foreach(@source_table).first
     CSV.open(@source_table, "w") do |new_csv|

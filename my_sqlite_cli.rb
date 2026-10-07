@@ -2,12 +2,14 @@
 require_relative 'my_sqlite_request'
 require 'readline'
 
+#--------------------------------------------- MAIN ---------------------------
 
 def main()
   usage_message()
   validate_file()
   cli_loop()
 end
+#--------------------------------------------- MAIN CONTROL METHODS ---------------------------
 
 def usage_message()
   if ARGV.empty?
@@ -48,6 +50,8 @@ def cli_loop()
   end 
 end
 
+#--------------------------------------------- TOKENISER & HELPER ---------------------------
+
 def tokenise_input(input)
   formatted_input = input.gsub(",", " , ").gsub(";", " ; ").gsub("(", " ( ").gsub(")", " ) ")
   tokens = formatted_input.split
@@ -83,10 +87,12 @@ def correct_tokens(tokens, corrected_tokens)
     end
   end
 end
+#--------------------------------------------- REQUEST ---------------------------
 
 def build_request()
   request = MySqliteRequest.new
 end 
+#---------------------------------------------PARSER (TOKENS)---------------------------
 
 def parse_tokens(tokens, request)
   index = 0
@@ -175,6 +181,7 @@ def parse_tokens(tokens, request)
   true 
 end 
 
+#---------------------------------------------PROCESS COMMAND METHODS & HELPERS ---------------------------
 
 
 def process_select(request, tokens, index)
@@ -277,44 +284,6 @@ def process_set(request, tokens, index)
   index
 end 
 
-def collect_data_values(set_values,tokens, index)
-  while tokens[index] != 'WHERE' && tokens[index] != ';'
-    #collect the data into a hash 
-    if tokens[index].nil? 
-      return false
-    end
-    
-    if tokens[index] == ','
-      index += 1
-    end 
-    
-    if tokens[index + 1 ] != '='
-      puts 'Expected; Column = value'
-      return false
-    end 
-    
-    if tokens[index + 2].nil? || tokens[index + 2] == ';'
-      return false 
-    elsif !valid_word_format(tokens[index + 2]) 
-      return false 
-    else 
-      set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
-      index += 3
-    end 
-    
-  end
-  index
-end 
-
-def valid_word_format(input)
-  if !input.start_with?("'") || !input.end_with?("'")
-    puts 'values must be surrounded by single quotes'
-    return false 
-  else 
-    return true 
-  end 
-end 
-
 def process_insert(request, tokens, index)
   if tokens[index] == 'INSERT' && tokens[index + 1] == 'INTO'
     index += 2
@@ -331,7 +300,6 @@ def process_insert(request, tokens, index)
   end 
 end 
 
-
 def process_values(request, tokens, index)
   if tokens[index] == 'VALUES' && tokens[index + 1] == '('
     index += 1 #pointing now to (
@@ -347,21 +315,6 @@ def process_values(request, tokens, index)
   request.values(values)
   index = result 
   index
-end 
-
-
-def collect_insert_values(values, tokens, index)
-  while tokens[index] != ')'
-    if tokens[index] == nil || tokens[index] == ';'
-      return false
-    end 
-    
-    if tokens[index] != '(' && tokens[index] != ','
-      values << tokens[index]
-    end 
-    index += 1
-  end 
-  index += 1 #else parser hangs on ')'
 end 
 
 def process_order(request, tokens, index)
@@ -398,8 +351,6 @@ def process_order(request, tokens, index)
   
 end 
 
-#JOIN table ON column_ a = column_b (only comes from SELECT)
-
 def process_join(request, tokens, index)
   if tokens[index] == 'JOIN' && tokens[index + 2] == 'ON' && tokens[index + 4] == '='
     index += 1 
@@ -423,6 +374,60 @@ def process_join(request, tokens, index)
   index
 end 
 
+#---------------------------------------------PROCESS COMMAND HELPERS ---------------------------
+
+def valid_word_format(input)
+  if !input.start_with?("'") || !input.end_with?("'")
+    puts 'values must be surrounded by single quotes'
+    return false 
+  else 
+    return true 
+  end 
+end 
+
+def collect_insert_values(values, tokens, index)
+  while tokens[index] != ')'
+    if tokens[index] == nil || tokens[index] == ';'
+      return false
+    end 
+    
+    if tokens[index] != '(' && tokens[index] != ','
+      values << tokens[index]
+    end 
+    index += 1
+  end 
+  index += 1 #else parser hangs on ')'
+end 
+
+def collect_data_values(set_values,tokens, index)
+  while tokens[index] != 'WHERE' && tokens[index] != ';'
+    #collect the data into a hash 
+    if tokens[index].nil? 
+      return false
+    end
+    
+    if tokens[index] == ','
+      index += 1
+    end 
+    
+    if tokens[index + 1 ] != '='
+      puts 'Expected; Column = value'
+      return false
+    end 
+    
+    if tokens[index + 2].nil? || tokens[index + 2] == ';'
+      return false 
+    elsif !valid_word_format(tokens[index + 2]) 
+      return false 
+    else 
+      set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
+      index += 3
+    end 
+    
+  end
+  index
+end 
+
 def is_valid_data(position)
   if position.nil? || position == ';'
     return false 
@@ -441,7 +446,12 @@ def check_final_token(tokens)
   end
 end 
 
-#--------------------------------------------- CLEANED UP BRANCHES ---------------------------
+def valid_select_column?(token)
+  invalid = ['WHERE', 'ORDER', 'JOIN', 'UPDATE', 'DELETE', 'INSERT', 'SET', 'VALUES']
+  !invalid.include?(token)
+end
+
+#--------------------------------------------- CLEANED UP BRANCHES FOR CASE ---------------------------
 
 def select(current_command, request, tokens, index)
   if current_command.nil? 
@@ -546,10 +556,5 @@ def values(current_command, parsing_stage, request, tokens, index)
     return false
   end 
 end 
-
-def valid_select_column?(token)
-  invalid = ['WHERE', 'ORDER', 'JOIN', 'UPDATE', 'DELETE', 'INSERT', 'SET', 'VALUES']
-  !invalid.include?(token)
-end
 
 main()
