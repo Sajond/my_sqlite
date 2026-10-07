@@ -1,18 +1,4 @@
-=begin 
 
-# SELECT Query 
-# INSERT Query 
-# UPDATE
-# DELETE 
-
-:none
-:select
-:insert
-:update
-:delete
-
-
-=end 
 require 'csv'
 
 class MySqliteRequest
@@ -114,36 +100,6 @@ class MySqliteRequest
     
 end
 
-def _main()
-    #request = MySqliteRequest.new
-    #------------------------select---------------------
-    #request = request.from('test.csv')
-    #request = request.select('*')
-    #request = request.where('weight', '300')
-    
-    #------------------------join---------------------
-    # request = request.order('asc', 'name') #use :ac or :desc for now NOT STRING
-    #request = request.join('name','nba_players.csv', 'Player' )
-    
-    #------------------------insert---------------------
-    #request = request.insert('test.csv')
-    #request = request.values({"name" => "Sam", "year_start" => "120", "position" => "Missionary"})
-    
-    #------------------------update---------------------
-    #request = request.update('small_test.csv')
-    #request = request.set( "name" => "voldemort")
-    #request = request.where('year_start', '2024')
-    
-    #------------------------delete---------------------
-    #request = request.from('small_test.csv')
-    #request = request.where('college', 'Duke University')
-    #request = request.delete()
-    #result = request.run
-
-    #chain test
-   
-    
-end 
 
 def build_requested_results(rows)
     result = []
@@ -216,7 +172,7 @@ def run_select()
         rows = CSV.read(@source_table, headers: true)
     end 
 
-    return false unless check_column_names(rows)
+    return false unless check_column_names(rows, @selected_columns)
 
     result = build_requested_results(rows)
     if @order_column != nil
@@ -270,9 +226,13 @@ def update_rows()
 end 
 
 def run_update()
+    rows = CSV.read(@source_table, headers: true)
+
+    return false unless check_column_names(rows, @update_values.keys)
+
     updated_rows = update_rows()
     rewrite_csv_rows(updated_rows)
-end 
+end
 
 def rewrite_csv_rows(updated_rows)
     CSV.open(@source_table, "w") do |new_csv|
@@ -315,7 +275,7 @@ def run_delete()
     write_preserved_rows(preserved_rows)
 end
 
-def check_column_names(rows)
+def check_column_names(rows, columns)
   return true if rows.empty?
 
   if rows.first.is_a?(CSV::Row)
@@ -324,7 +284,7 @@ def check_column_names(rows)
     headers = rows.first.keys
   end
 
-  @selected_columns.each do |column|
+  columns.each do |column|
     unless headers.include?(column) || column == "*"
       puts "Column #{column} doesn't exist"
       return false
@@ -337,46 +297,3 @@ end
 if __FILE__ == $PROGRAM_NAME
     _main
 end
-#? UPDATE
-#? can change multiple columns in a single update, no where = all, where/ specific
-
-=begin read the existing CSV rows.
-
-For each row, determine whether it matches WHERE. If there is no WHERE, every row matches.
-
-For each matching row, apply the column/value pairs from set(data). Preserve all unspecified columns.
-
-Write the resulting rows back to the CSV.
-#hash[key] = value
-
-
-MySQLite TODO
-Clean/test SELECT
-Add SELECT *
-Finish/test JOIN
-Implement INSERT
-Implement UPDATE
-Implement DELETE
-Test all Part 00 methods
-Clean up code
-Build Part 01 CLI
-Final testing
-
-@source_table       → String        → "nba_player_data.csv"
-
-@selected_columns   → Array         → ["name", "height"]
-
-@filter_column      → String / nil  → "college"
-
-@filter_value       → String / nil  → "University of Kansas"
-
-rows                → collection    → many CSV rows
-
-row                 → CSV::Row      → one player's row
-
-matching_row        → Hash          → {"name"=>"...", "height"=>"..."}
-
-result              → Array         → many matching_row hashes
-
-=end
-#todo project states each row must have an ID? -to check
