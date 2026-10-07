@@ -95,9 +95,8 @@ class MySqliteRequest
             
             result = run_select()
             
-            #todo remove this and allow CLI loop to handle output
             result.each do |line| 
-                puts "#{line}"
+                puts line.values.join("|")
             end 
             
         when :insert 
@@ -141,11 +140,7 @@ def _main()
     #result = request.run
 
     #chain test
-    MySqliteRequest.new
-    .from('test.csv')
-    .select('*')
-    .where('name', 'Test Player')
-    .run
+   
     
 end 
 
