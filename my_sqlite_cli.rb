@@ -183,7 +183,17 @@ def parse_tokens(tokens, request)
         return false
       end 
       
+      #todo: Test order by functionality
     when 'ORDER' #by is +1 index
+      if current_command == 'SELECT' && (parsing_stage == 'FROM' || parsing_stage == 'WHERE')
+        parsing_stage = ' ORDER'
+        result = process_order(request, tokens, index)
+        return false if result == false
+        index = result
+      else 
+        return false
+      end 
+
 
     when 'VALUES'
       if current_command == 'INSERT' && parsing_stage == 'INSERT'
@@ -215,7 +225,6 @@ def process_select(request, tokens, index)
     return false 
   end 
   
-  #todo SQL validation for malformed input?
   while tokens[index] != 'FROM'
     if tokens[index] == ','
       #do nothing
@@ -396,6 +405,38 @@ def collect_insert_values(values, tokens, index)
   index += 1 #else parser hangs on ')'
 end 
 
-  
+def process_order(request, tokens, index)
+  order_direction = nil
+  column_name = nil
+
+  if tokens[index] == 'ORDER' && tokens[index + 1] = 'BY'
+    index +=2 
+  else 
+    puts 'Expected: ORDER BY <column name> <ASC/DESC>'
+    return false
+  end 
+
+  #checks column name 
+  if tokens[index] == nil || tokens[index] == ';'
+    return false
+  else 
+    column_name = tokens[index]
+    index +=1
+  end 
+
+  if tokens[index] == 'ASC'
+    order_direction = :asc
+  elsif tokens[index] == 'DESC'
+    order_direction = :desc
+  else 
+    puts 'Expected: ORDER BY <column name> <ASC/DESC>'
+    return false
+  end 
+
+  request.order(order_direction, column_name); 
+  index += 1
+  index
+
+end 
 
 main()
