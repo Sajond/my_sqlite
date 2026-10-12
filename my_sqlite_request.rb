@@ -182,16 +182,19 @@ def run_select()
 end
 
 #changed to accept an array value as example in specs passed as array not hash, same as standard SQL behaviour for insert values
+#todo collect/process the information as a hash not an array
+
 def build_new_row()
-    data_to_insert= @insert_values
-    new_row = []
-    
+    data_to_insert = @insert_values #is a hash
+    data_row = []
+
     headers = CSV.foreach(@source_table).first
-    headers.each_with_index do |current_header, index|
-        new_row << data_to_insert[index]
-    end
-    new_row
-end
+    headers.each do |header|
+        data_row << data_to_insert[header]
+    end 
+    data_row
+end 
+ 
 
 def append_new_row(new_row)
     CSV.open(@source_table, "a") do |csv_to_insert| 

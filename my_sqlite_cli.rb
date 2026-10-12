@@ -295,8 +295,11 @@ def process_insert(request, tokens, index)
     index += 1 
   end 
 end 
-
+#todo this must collect a hash not an array
 def process_values(request, tokens, index)
+  #cuyrrent index VALUES -1 = table name 
+  table_name = tokens[index - 1]
+  
   if tokens[index] == 'VALUES' && tokens[index + 1] == '('
     index += 1 #pointing now to (
   else 
@@ -308,7 +311,17 @@ def process_values(request, tokens, index)
   values = []
   result = collect_insert_values(values, tokens, index)
   return false if result == false 
-  request.values(values)
+  p values 
+  
+  #match headers to collected data
+  headers = CSV.foreach(table_name).first
+  hash = {}
+  headers.each_with_index do |column_name, index|
+    hash[column_name] = values[index]
+  end 
+  p hash
+
+  request.values(hash)
   index = result 
   index
 end 
@@ -317,7 +330,7 @@ def process_order(request, tokens, index)
   order_direction = nil
   column_name = nil
   
-  if tokens[index] == 'ORDER' && tokens[index + 1] = 'BY'
+  if tokens[index] == 'ORDER' && tokens[index + 1] == 'BY'
     index +=2 
   else 
     puts 'Expected: ORDER BY <column name> <ASC/DESC>'
@@ -381,6 +394,7 @@ def valid_word_format(input)
   end 
 end 
 
+#todo this must collect a hash not an array
 def collect_insert_values(values, tokens, index)
   while tokens[index] != ')'
     if tokens[index] == nil || tokens[index] == ';'
