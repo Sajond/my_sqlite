@@ -37,7 +37,6 @@ def cli_loop()
     break if input.nil? || input.strip == "quit"
     next if input.strip.empty?
     tokens = tokenise_input(input)
-    p tokens
     request = build_request()
     
     success = parse_tokens(tokens, request)
@@ -65,9 +64,10 @@ end
 def correct_tokens(tokens, corrected_tokens)
   inside_quote = false
   combined = nil
-  
+  opening_char = nil
   tokens.each do |token|
     if token.start_with?("'", '"') && !token.end_with?("'",'"')
+      opening_char = token[0]
       combined = token.dup.delete_prefix('"').delete_prefix("'")
       inside_quote = true
       #middle token branch
@@ -80,7 +80,7 @@ def correct_tokens(tokens, corrected_tokens)
       
     elsif  inside_quote == true && token.end_with?("'",'"')
       combined << " " << token.delete_suffix('"').delete_suffix("'")
-      corrected_tokens << combined
+      corrected_tokens << "#{opening_char}#{combined}#{opening_char}"
       inside_quote = false
     else 
       corrected_tokens << token
@@ -295,6 +295,7 @@ def process_insert(request, tokens, index)
     index += 1 
   end 
 end 
+
 #todo this must collect a hash not an array
 def process_values(request, tokens, index)
   #cuyrrent index VALUES -1 = table name 
@@ -311,7 +312,6 @@ def process_values(request, tokens, index)
   values = []
   result = collect_insert_values(values, tokens, index)
   return false if result == false 
-  p values 
   
   #match headers to collected data
   headers = CSV.foreach(table_name).first
@@ -319,7 +319,6 @@ def process_values(request, tokens, index)
   headers.each_with_index do |column_name, index|
     hash[column_name] = values[index]
   end 
-  p hash
 
   request.values(hash)
   index = result 
@@ -387,14 +386,13 @@ end
 
 def valid_word_format(input)
   if !input.start_with?("'") || !input.end_with?("'")
-    puts 'values must be surrounded by single quotes'
+    puts 'values after = must be surrounded by single quotes'
     return false 
   else 
     return true 
   end 
 end 
 
-#todo this must collect a hash not an array
 def collect_insert_values(values, tokens, index)
   while tokens[index] != ')'
     if tokens[index] == nil || tokens[index] == ';'
@@ -424,7 +422,6 @@ def collect_data_values(set_values,tokens, index)
       puts 'Expected; Column = value'
       return false
     end 
-    
     return false unless is_valid_data(tokens[index + 2])
     return false unless valid_word_format(tokens[index + 2])
     
