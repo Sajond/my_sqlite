@@ -319,7 +319,7 @@ def process_values(request, tokens, index)
   headers.each_with_index do |column_name, index|
     hash[column_name] = values[index]
   end 
-
+  
   request.values(hash)
   index = result 
   index
@@ -367,17 +367,18 @@ def process_join(request, tokens, index)
     return false
   end 
   
-  table_name_b = is_valid_data(tokens[index])
-  return false if table_name_b == false 
+  return false unless is_valid_data(tokens[index])
+  table_name_b = tokens[index]
+  index += 2 
+  
+  return false unless is_valid_data(tokens[index])
+  column_db_a = tokens[index]
   index += 2
   
-  column_db_a = is_valid_data(tokens[index])
-  return false if column_db_a == false 
-  index += 2
-  
-  column_db_b = is_valid_data(tokens[index])
-  return false if column_db_b == false 
+  return false unless is_valid_data(tokens[index])
+  column_db_b = tokens[index]
   index += 1
+  
   request.join(column_db_a, table_name_b, column_db_b)
   index
 end 
@@ -436,7 +437,7 @@ def is_valid_data(position)
   if position.nil? || position == ';'
     return false 
   else 
-    return position
+    return true
   end 
 end 
 
