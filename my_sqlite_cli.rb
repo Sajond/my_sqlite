@@ -401,7 +401,7 @@ def collect_insert_values(values, tokens, index)
     end 
     
     if tokens[index] != '(' && tokens[index] != ','
-      values << tokens[index]
+      values << tokens[index].delete_prefix("'").delete_suffix("'").delete_prefix('"').delete_suffix('"')
     end 
     index += 1
   end 
