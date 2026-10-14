@@ -29,6 +29,10 @@ class MySqliteRequest
     end 
     
     def where(column_name, criteria)
+        if @filter_column || @filter_value != nil 
+            puts 'Only one where call per request permitted '
+            return false 
+        end
         @filter_column = column_name
         @filter_value = criteria
         self
@@ -295,57 +299,61 @@ Previous review stated that UPDATE must be called with VALUES but given project 
 Insert: Implement a method to insert which will receive a table name (filename). It will continue to build the request.
 def insert(table_name)
     
-Values: Implement a method to values which will receive data. (a hash of data on format (key => value)). It will continue to build the request. During the run() you do the insert.      
-def values(data)
-            
-
-    AND 
-   
-   
-Update: Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
-def update(table_name)
-
-Set: Implement a method to update which will receive data (a hash of data on format (key => value)). It will perform the update of attributes on all matching row. An update request might be associated with a where request.
-def set(data)
-
-Example rubric given: 
-my_sqlite_cli>INSERT INTO students VALUES (John, john@johndoe.com, A, https://blog.johndoe.com);
-my_sqlite_cli>UPDATE students SET email = 'jane@janedoe.com', blog = 'https://blog.janedoe.com' WHERE name = 'Jane';
-
-which follows the specs as values called after insert and set called after update.
-=end 
-
-
-
-=begin
-TEST you can use if you run just the request.rb file
-            def main()
-                request = MySqliteRequest.new
-                request = request.insert('small_test.csv')
-                request = request.values(
-                'name' => 'Alaa Abdelnaby',
-                'year_start' => '1991',
-                'year_end' => '1995',
-                'position' => 'F-C',
-                'height' => '6-10',
-                'weight' => '240',
-                'birth_date' => 'June 24, 1968',
-                'college' => 'Duke University'
-                )
-                request.run
-            end 
-            
-            def main()
-                request = MySqliteRequest.new
-                request = request.update('small_test.csv')
-                request = request.set(
-                'name' => 'Alaa Renamed',
-                'college' => 'Test University'
-                )
-                request = request.where('name', 'Alaa Abdelnaby')
-                request.run
-            end
+    Values: Implement a method to values which will receive data. (a hash of data on format (key => value)). It will continue to build the request. During the run() you do the insert.      
+        def values(data)
             
             
-            main()
-=end 
+            AND 
+            
+            
+            Update: Implement a method to update which will receive a table name (filename). It will continue to build the request. An update request might be associated with a where request.
+            def update(table_name)
+                
+                Set: Implement a method to update which will receive data (a hash of data on format (key => value)). It will perform the update of attributes on all matching row. An update request might be associated with a where request.
+                def set(data)
+                    
+                    Example rubric given: 
+                    my_sqlite_cli>INSERT INTO students VALUES (John, john@johndoe.com, A, https://blog.johndoe.com);
+                    my_sqlite_cli>UPDATE students SET email = 'jane@janedoe.com', blog = 'https://blog.janedoe.com' WHERE name = 'Jane';
+                    
+                    which follows the specs as values called after insert and set called after update.
+                    
+                    
+                    
+                    
+                    
+                    TEST you can use if you run just the request.rb file
+                    def main()
+                        request = MySqliteRequest.new
+                        request = request.insert('small_test.csv')
+                        request = request.values(
+                        'name' => 'Alaa Abdelnaby',
+                        'year_start' => '1991',
+                        'year_end' => '1995',
+                        'position' => 'F-C',
+                        'height' => '6-10',
+                        'weight' => '240',
+                        'birth_date' => 'June 24, 1968',
+                        'college' => 'Duke University'
+                        )
+                        request.run
+                    end 
+                    
+                    
+ 
+                               
+def main()
+                        request = MySqliteRequest.new
+                        request = request.update('small_test.csv')
+                        request = request.set(
+                        'name' => 'newname',
+                        'college' => 'Test 14'
+                        )
+                        request = request.where('name', 'test')
+                        request = request.where('name', 'test')
+                        request.run
+                    end
+                    
+                    
+main()                   
+=end  
