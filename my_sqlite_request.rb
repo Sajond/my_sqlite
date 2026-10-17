@@ -30,8 +30,7 @@ class MySqliteRequest
     
     def where(column_name, criteria)
         if @filter_column || @filter_value != nil 
-            puts 'Only one where call per request permitted '
-            return false 
+            raise ArgumentError, "Only one where call is supported"
         end
         @filter_column = column_name
         @filter_value = criteria

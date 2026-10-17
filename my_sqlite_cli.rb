@@ -33,19 +33,24 @@ end
 
 def cli_loop()
   loop do
-    input = Readline.readline('my_sqlite_cli>', true)
-    break if input.nil? || input.strip == "quit"
-    next if input.strip.empty?
-    tokens = tokenise_input(input)
-    request = build_request()
-    
-    success = parse_tokens(tokens, request)
-    if success != true 
-      puts 'Parsing failed'
-      next 
-    end 
-    
-    result = request.run
+    begin   
+      
+      input = Readline.readline('my_sqlite_cli>', true)
+      break if input.nil? || input.strip == "quit"
+      next if input.strip.empty?
+      tokens = tokenise_input(input)
+      request = build_request()
+      
+      success = parse_tokens(tokens, request)
+      if success != true 
+        puts 'Parsing failed'
+        next 
+      end 
+      result = request.run
+      
+    rescue ArgumentError => e 
+      puts "Error: #{e.message}"
+    end
   end 
 end
 
@@ -113,7 +118,6 @@ def parse_tokens(tokens, request)
       
     when 'WHERE'
       result = where(current_command, parsing_stage, request, tokens, index)
-      return false if result == false 
       index = result 
       parsing_stage = 'WHERE'
       
@@ -226,11 +230,9 @@ end
 def process_where(request, tokens, index)
   #for value after = the '' prefix and suffix must be .delete_suf/pref to be passed correctly
   #fixed value of 3 indexes so return 4th for next arg
-  return false if tokens[index] != 'WHERE'
-  return false if tokens[index + 1] == nil || tokens[index + 1] == ';'
-  return false if tokens[index + 2] != '='
-  return false if tokens[index + 3] == nil || tokens[index + 3] == ';'
-  return false if !valid_word_format(tokens[index + 3])
+  if valiù_syntax(tokens, index) != true
+    raise ArgumentError, "WHERE syntax, EXPECTED: WHERE <valid column name> = <valid column value>."
+  end 
   filter_column = tokens[index + 1]
   filter_value = tokens[index + 3]
   filter_value = filter_value.delete_prefix("'").delete_suffix("'")
@@ -239,327 +241,337 @@ def process_where(request, tokens, index)
   index
 end 
 
-def process_delete(request, tokens, index)
-  return false if tokens[index] != 'DELETE'
-  return false if tokens[index + 1] != 'FROM'
-  request.delete
-  index + 1
+def valid_where_syntax(tokens, index)
+  return false if tokens[index] != 'WHERE'
+  return false if tokens[index + 1] == nil || tokens[index + 1] == ';'
+  return false if tokens[index + 2] != '='
+  return false if tokens[index + 3] == nil || tokens[index + 3] == ';'
+  return false if !valid_word_format(tokens[index + 3])
+  true 
 end 
-
-def process_update(request, tokens, index )
-  if tokens[index] == 'UPDATE'
+  
+  def process_delete(request, tokens, index)
+    return false if tokens[index] != 'DELETE'
+    return false if tokens[index + 1] != 'FROM'
+    request.delete
+    index + 1
+  end 
+  
+  def process_update(request, tokens, index )
+    if tokens[index] == 'UPDATE'
+      index += 1
+    else 
+      puts 'Expected: UPDATE'
+      return false
+    end 
+    
+    return false unless is_valid_data(tokens[index])
+    
+    request.update(tokens[index])
     index += 1
-  else 
-    puts 'Expected: UPDATE'
-    return false
+    
+    index
   end 
   
-  return false unless is_valid_data(tokens[index])
-  
-  request.update(tokens[index])
-  index += 1
-  
-  index
-end 
-
-def process_set(request, tokens, index)
-  if tokens[index] == 'SET' && tokens[index + 1] != ','
-    index += 1 
-  else 
-    puts 'Expected: SET <value name>'
-    return false
+  def process_set(request, tokens, index)
+    if tokens[index] == 'SET' && tokens[index + 1] != ','
+      index += 1 
+    else 
+      puts 'Expected: SET <value name>'
+      return false
+    end 
+    
+    return false unless is_valid_data(tokens[index])
+    
+    set_values = {}
+    result = collect_data_values(set_values, tokens, index)
+    return false if result == false
+    request.set(set_values)
+    index = result 
+    index
   end 
   
-  return false unless is_valid_data(tokens[index])
-  
-  set_values = {}
-  result = collect_data_values(set_values, tokens, index)
-  return false if result == false
-  request.set(set_values)
-  index = result 
-  index
-end 
-
-def process_insert(request, tokens, index)
-  if tokens[index] == 'INSERT' && tokens[index + 1] == 'INTO'
-    index += 2
-  else 
-    puts 'Usage: INSERT INTO'
-    return false
+  def process_insert(request, tokens, index)
+    if tokens[index] == 'INSERT' && tokens[index + 1] == 'INTO'
+      index += 2
+    else 
+      puts 'Usage: INSERT INTO'
+      return false
+    end 
+    
+    if !is_valid_data(tokens[index]) || tokens[index + 1] != 'VALUES'
+      return false 
+    else 
+      request.insert(tokens[index])
+      index += 1 
+    end 
+    index
   end 
   
-  if !is_valid_data(tokens[index]) || tokens[index + 1] != 'VALUES'
-    return false 
-  else 
-    request.insert(tokens[index])
-    index += 1 
-  end 
-end 
-
-#todo this must collect a hash not an array
-def process_values(request, tokens, index)
-  #cuyrrent index VALUES -1 = table name 
-  table_name = tokens[index - 1]
-  
-  if tokens[index] == 'VALUES' && tokens[index + 1] == '('
-    index += 1 #pointing now to (
-  else 
-    puts 'Expected: VALUES ( '
-    return false
-  end 
-  return false if tokens[index] == nil || tokens[index] == ';'
-  
-  values = []
-  result = collect_insert_values(values, tokens, index)
-  return false if result == false 
-  
-  #match headers to collected data
-  headers = CSV.foreach(table_name).first
-  hash = {}
-  headers.each_with_index do |column_name, index|
-    hash[column_name] = values[index]
+  #todo this must collect a hash not an array
+  def process_values(request, tokens, index)
+    #cuyrrent index VALUES -1 = table name 
+    table_name = tokens[index - 1]
+    
+    if tokens[index] == 'VALUES' && tokens[index + 1] == '('
+      index += 1 #pointing now to (
+    else 
+      puts 'Expected: VALUES ( '
+      return false
+    end 
+    return false if tokens[index] == nil || tokens[index] == ';'
+    
+    values = []
+    result = collect_insert_values(values, tokens, index)
+    return false if result == false 
+    
+    #match headers to collected data
+    headers = CSV.foreach(table_name).first
+    hash = {}
+    headers.each_with_index do |column_name, index|
+      hash[column_name] = values[index]
+    end 
+    
+    request.values(hash)
+    index = result 
+    index
   end 
   
-  request.values(hash)
-  index = result 
-  index
-end 
-
-def process_order(request, tokens, index)
-  order_direction = nil
-  column_name = nil
-  
-  if tokens[index] == 'ORDER' && tokens[index + 1] == 'BY'
-    index +=2 
-  else 
-    puts 'Expected: ORDER BY <column name> <ASC/DESC>'
-    return false
-  end 
-  
-  #checks column name 
-  if tokens[index] == nil || tokens[index] == ';'
-    return false
-  else 
-    column_name = tokens[index]
-    index +=1
-  end 
-  
-  if tokens[index] == 'ASC'
-    order_direction = :asc
-  elsif tokens[index] == 'DESC'
-    order_direction = :desc
-  else 
-    puts 'Expected: ORDER BY <column name> <ASC/DESC>'
-    return false
-  end 
-  
-  request.order(order_direction, column_name); 
-  index += 1
-  index
-  
-end 
-
-def process_join(request, tokens, index)
-  if tokens[index] == 'JOIN' && tokens[index + 2] == 'ON' && tokens[index + 4] == '='
-    index += 1 
-  else 
-    puts 'USAGE: JOIN <table_name_b> ON <column_db_a> = <column_db_b>'
-    return false
-  end 
-  
-  return false unless is_valid_data(tokens[index])
-  table_name_b = tokens[index]
-  index += 2 
-  
-  return false unless is_valid_data(tokens[index])
-  column_db_a = tokens[index]
-  index += 2
-  
-  return false unless is_valid_data(tokens[index])
-  column_db_b = tokens[index]
-  index += 1
-  
-  request.join(column_db_a, table_name_b, column_db_b)
-  index
-end 
-
-#---------------------------------------------PROCESS COMMAND HELPERS ---------------------------
-
-def valid_word_format(input)
-  if !input.start_with?("'") || !input.end_with?("'")
-    puts 'values after = must be surrounded by single quotes'
-    return false 
-  else 
-    return true 
-  end 
-end 
-
-def collect_insert_values(values, tokens, index)
-  while tokens[index] != ')'
+  def process_order(request, tokens, index)
+    order_direction = nil
+    column_name = nil
+    
+    if tokens[index] == 'ORDER' && tokens[index + 1] == 'BY'
+      index +=2 
+    else 
+      puts 'Expected: ORDER BY <column name> <ASC/DESC>'
+      return false
+    end 
+    
+    #checks column name 
     if tokens[index] == nil || tokens[index] == ';'
       return false
+    else 
+      column_name = tokens[index]
+      index +=1
     end 
     
-    if tokens[index] != '(' && tokens[index] != ','
-      values << tokens[index].delete_prefix("'").delete_suffix("'").delete_prefix('"').delete_suffix('"')
-    end 
-    index += 1
-  end 
-  index += 1 #else parser hangs on ')'
-end 
-
-def collect_data_values(set_values,tokens, index)
-  while tokens[index] != 'WHERE' && tokens[index] != ';'
-    #collect the data into a hash 
-    if tokens[index].nil? 
+    if tokens[index] == 'ASC'
+      order_direction = :asc
+    elsif tokens[index] == 'DESC'
+      order_direction = :desc
+    else 
+      puts 'Expected: ORDER BY <column name> <ASC/DESC>'
       return false
-    end
+    end 
     
-    if tokens[index] == ','
+    request.order(order_direction, column_name); 
+    index += 1
+    index
+    
+  end 
+  
+  def process_join(request, tokens, index)
+    if tokens[index] == 'JOIN' && tokens[index + 2] == 'ON' && tokens[index + 4] == '='
+      index += 1 
+    else 
+      puts 'USAGE: JOIN <table_name_b> ON <column_db_a> = <column_db_b>'
+      return false
+    end 
+    
+    return false unless is_valid_data(tokens[index])
+    table_name_b = tokens[index]
+    index += 2 
+    
+    return false unless is_valid_data(tokens[index])
+    column_db_a = tokens[index]
+    index += 2
+    
+    return false unless is_valid_data(tokens[index])
+    column_db_b = tokens[index]
+    index += 1
+    
+    request.join(column_db_a, table_name_b, column_db_b)
+    index
+  end 
+  
+  #---------------------------------------------PROCESS COMMAND HELPERS ---------------------------
+  
+  def valid_word_format(input)
+    if !input.start_with?("'") || !input.end_with?("'")
+      puts 'values after = must be surrounded by single quotes'
+      return false 
+    else 
+      return true 
+    end 
+  end 
+  
+  def collect_insert_values(values, tokens, index)
+    while tokens[index] != ')'
+      if tokens[index] == nil || tokens[index] == ';'
+        return false
+      end 
+      
+      if tokens[index] != '(' && tokens[index] != ','
+        values << tokens[index].delete_prefix("'").delete_suffix("'").delete_prefix('"').delete_suffix('"')
+      end 
       index += 1
     end 
-    
-    if tokens[index + 1 ] != '='
-      puts 'Expected; Column = value'
+    index += 1 #else parser hangs on ')'
+  end 
+  
+  def collect_data_values(set_values,tokens, index)
+    while tokens[index] != 'WHERE' && tokens[index] != ';'
+      #collect the data into a hash 
+      if tokens[index].nil? 
+        return false
+      end
+      
+      if tokens[index] == ','
+        index += 1
+      end 
+      
+      if tokens[index + 1 ] != '='
+        puts 'Expected; Column = value'
+        return false
+      end 
+      return false unless is_valid_data(tokens[index + 2])
+      return false unless valid_word_format(tokens[index + 2])
+      
+      set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
+      index += 3
+      
+    end
+    index
+  end 
+  
+  def is_valid_data(position)
+    if position.nil? || position == ';'
+      return false 
+    else 
+      return true
+    end 
+  end 
+  
+  def check_final_token(tokens)
+    final_token = tokens.length - 1
+    if tokens[final_token] != ';'
+      puts 'Statement must end with ;'
+      return false 
+    else 
+      return true 
+    end
+  end 
+  
+  def valid_select_column?(token)
+    invalid = ['WHERE', 'ORDER', 'JOIN', 'UPDATE', 'DELETE', 'INSERT', 'SET', 'VALUES']
+    !invalid.include?(token)
+  end
+  
+  #--------------------------------------------- CLEANED UP BRANCHES FOR CASE ---------------------------
+  
+  def select(current_command, request, tokens, index)
+    if current_command.nil? 
+      result = process_select(request, tokens, index)
+      return false if result == false 
+      result
+    else 
       return false
     end 
-    return false unless is_valid_data(tokens[index + 2])
-    return false unless valid_word_format(tokens[index + 2])
-    
-    set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
-    index += 3
-    
   end
-  index
-end 
-
-def is_valid_data(position)
-  if position.nil? || position == ';'
-    return false 
-  else 
-    return true
-  end 
-end 
-
-def check_final_token(tokens)
-  final_token = tokens.length - 1
-  if tokens[final_token] != ';'
-    puts 'Statement must end with ;'
-    return false 
-  else 
-    return true 
+  
+  def where(current_command, parsing_stage, request, tokens, index)
+    if ((current_command == 'SELECT' || current_command == 'DELETE') && parsing_stage == 'FROM') ||
+      (current_command == 'SELECT' && parsing_stage == 'JOIN') ||
+      (current_command == 'UPDATE' && parsing_stage == 'SET')
+      result = process_where(request, tokens, index)
+      return false if result == false
+      result
+    else 
+      raise ArgumentError, "WHERE cannot be called after preceding/no command."
+    end 
   end
-end 
-
-def valid_select_column?(token)
-  invalid = ['WHERE', 'ORDER', 'JOIN', 'UPDATE', 'DELETE', 'INSERT', 'SET', 'VALUES']
-  !invalid.include?(token)
-end
-
-#--------------------------------------------- CLEANED UP BRANCHES FOR CASE ---------------------------
-
-def select(current_command, request, tokens, index)
-  if current_command.nil? 
-    result = process_select(request, tokens, index)
-    return false if result == false 
-    result
-  else 
-    return false
+  
+  def from(current_command, parsing_stage, request, tokens, index)
+    if (current_command == 'SELECT' || current_command == 'DELETE')  && 
+      parsing_stage == current_command 
+      result = process_from(request, tokens, index)
+      return false if result == false 
+      result
+      
+    else 
+      return false 
+    end 
   end 
-end
-
-def where(current_command, parsing_stage, request, tokens, index)
-  if ((current_command == 'SELECT' || current_command == 'DELETE') && parsing_stage == 'FROM') ||
-    (current_command == 'SELECT' && parsing_stage == 'JOIN') ||
-    (current_command == 'UPDATE' && parsing_stage == 'SET')
-    result = process_where(request, tokens, index)
-    return false if result == false
-    result
-  else 
-    return false
+  
+  def join(current_command, parsing_stage, request, tokens, index)
+    if current_command == 'SELECT' && parsing_stage == 'FROM'
+      result = process_join(request, tokens, index)
+      return false if result == false
+      result
+    else 
+      return false 
+    end 
   end 
-end
-
-def from(current_command, parsing_stage, request, tokens, index)
-  if (current_command == 'SELECT' || current_command == 'DELETE')  && 
-    parsing_stage == current_command 
-    result = process_from(request, tokens, index)
-    return false if result == false 
-    result
-    
-  else 
-    return false 
+  
+  def update(current_command, request, tokens, index)
+    if current_command.nil? 
+      result = process_update(request, tokens, index)
+      return false if result == false 
+      result 
+    else 
+      return false
+    end 
   end 
-end 
-
-def join(current_command, parsing_stage, request, tokens, index)
-  if current_command == 'SELECT' && parsing_stage == 'FROM'
-    result = process_join(request, tokens, index)
-    return false if result == false
-    result
-  else 
-    return false 
+  
+  def insert(current_command, request, tokens, index)
+    if current_command.nil? 
+      result = process_insert(request, tokens, index)
+      return false if result == false
+      result
+    else 
+      return false 
+    end 
   end 
-end 
-
-def update(current_command, request, tokens, index)
-  if current_command.nil? 
-    result = process_update(request, tokens, index)
-    return false if result == false 
-    result 
-  else 
-    return false
+  
+  def set(current_command, request, tokens, index)
+    if current_command == 'UPDATE'
+      result = process_set(request, tokens, index)
+      return false if result == false
+      result
+    else 
+      return false 
+    end 
   end 
-end 
-
-def insert(current_command, request, tokens, index)
-  if current_command.nil? 
-    result = process_insert(request, tokens, index)
-    return false if result == false
-    result
-  else 
-    return false 
+  
+  def delete(current_command, request, tokens, index)
+    if current_command.nil? 
+      result = process_delete(request, tokens, index)
+      return false if result == false 
+      result
+    else 
+      return false
+    end 
   end 
-end 
-
-def set(current_command, request, tokens, index)
-  if current_command == 'UPDATE'
-    result = process_set(request, tokens, index)
-    return false if result == false
-    result
-  else 
-    return false 
+  
+  def order(current_command, parsing_stage, request, tokens, index)
+    if current_command == 'SELECT' && (parsing_stage == 'FROM' || parsing_stage == 'WHERE' || parsing_stage == 'JOIN')
+      result = process_order(request, tokens, index)
+      return false if result == false
+      result
+    else 
+      return false
+    end 
   end 
-end 
-
-def delete(current_command, request, tokens, index)
-  if current_command.nil? 
-    result = process_delete(request, tokens, index)
-    return false if result == false 
-    result
-  else 
-    return false
+  
+  def values(current_command, parsing_stage, request, tokens, index)
+    if current_command == 'INSERT' && parsing_stage == 'INSERT'
+      result = process_values(request, tokens, index)
+      return false if result == false 
+      result
+    else 
+      return false
+    end 
   end 
-end 
-
-def order(current_command, parsing_stage, request, tokens, index)
-  if current_command == 'SELECT' && (parsing_stage == 'FROM' || parsing_stage == 'WHERE' || parsing_stage == 'JOIN')
-    result = process_order(request, tokens, index)
-    return false if result == false
-    result
-  else 
-    return false
-  end 
-end 
-
-def values(current_command, parsing_stage, request, tokens, index)
-  if current_command == 'INSERT' && parsing_stage == 'INSERT'
-    result = process_values(request, tokens, index)
-    return false if result == false 
-    result
-  else 
-    return false
-  end 
-end 
-
-main()
+  
+  main()
