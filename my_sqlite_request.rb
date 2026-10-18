@@ -18,7 +18,11 @@ class MySqliteRequest
     end 
     
     def from(table_name)
+        table_name = "#{table_name}.csv" unless table_name.downcase.end_with?('.csv')
         @source_table = table_name
+        if is_valid_file(table_name) != true
+            raise ArgumentError, "Invalid File name"
+        end 
         self
     end 
     
@@ -52,6 +56,10 @@ class MySqliteRequest
     #---------------------------------------
     def insert(table_name)
         @type_of_request = :insert
+        table_name = "#{table_name}.csv" unless table_name.downcase.end_with?('.csv')
+        if is_valid_file(table_name) != true
+            raise ArgumentError, "Invalid File name"
+        end 
         @source_table = table_name
         self
     end 
@@ -69,6 +77,10 @@ class MySqliteRequest
     
     def update(table_name)
         @type_of_request = :update
+        table_name = "#{table_name}.csv" unless table_name.downcase.end_with?('.csv')
+        if is_valid_file(table_name) != true
+            raise ArgumentError, "Invalid File name"
+        end 
         @source_table = table_name
         self 
     end 
@@ -187,7 +199,6 @@ class MySqliteRequest
     end
     
     #changed to accept an array value as example in specs passed as array not hash, same as standard SQL behaviour for insert values
-    #todo collect/process the information as a hash not an array
     
     def build_new_row()
         data_to_insert = @insert_values #is a hash
@@ -292,5 +303,15 @@ class MySqliteRequest
         
         true
     end
+    
+    def is_valid_file(file_name)
+        #file_name += '.csv' unless file_name.end_with?('.csv')
+        if File.file?(file_name)
+            return true 
+        else 
+            return false
+        end
+    end 
 end
 
+#todo Add file validation in this file for anything that calls source table
