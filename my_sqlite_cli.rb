@@ -41,6 +41,7 @@ def cli_loop()
       tokens = tokenise_input(input)
       request = build_request()
       
+      #todo parse tokens no longer needs a true/false check BUT we need to change returning false to propogate errors
       success = parse_tokens(tokens, request)
       if success != true 
         puts 'Parsing failed'
@@ -104,7 +105,6 @@ def parse_tokens(tokens, request)
   current_command = nil #SELECT, UPD, DEL 
   parsing_stage = nil
   
-  #return false unless check_final_token(tokens)
   
   while index < tokens.length
     case tokens[index]
@@ -177,10 +177,11 @@ def parse_tokens(tokens, request)
     when ';'
       if index + 1 == tokens.length 
         break
-      else 
-        #return false
       end 
     end
+    if index+ 1 == tokens.length 
+      break 
+    end 
   end 
   true 
 end 
@@ -310,7 +311,7 @@ end
 def process_values(request, tokens, index)
   #cuyrrent index VALUES -1 = table name 
   table_name = tokens[index - 1]
-  
+  table_name += '.csv' unless table_name.end_with?('.csv')
   
   if tokens[index] == 'VALUES' && tokens[index + 1] == '('
     index += 1 #pointing now to (
@@ -451,17 +452,7 @@ def is_valid_data(position)
     return true
   end 
 end 
-
-def check_final_token(tokens)
-  final_token = tokens.length - 1
-  if tokens[final_token] != ';'
-    puts 'Statement must end with ;'
-    return false 
-  else 
-    return true 
-  end
-end 
-
+ 
 def valid_select_column?(token)
   invalid = ['WHERE', 'ORDER', 'JOIN', 'UPDATE', 'DELETE', 'INSERT', 'SET', 'VALUES']
   !invalid.include?(token)
