@@ -219,12 +219,6 @@ def process_from(request, tokens, index)
     return false
   end 
   
-  #return false unless is_valid_data(tokens[index])
-  
-  if is_valid_file(tokens[index]) != true 
-    raise ArgumentError, "FROM <invalid file>"
-  end 
-    
     request.from(tokens[index])
     index += 1
     
@@ -579,15 +573,8 @@ end
     end 
   end 
   
-  def is_valid_file(file_name)
-    file_name += '.csv' unless file_name.end_with?('.csv')
-    if File.file?(file_name)
-      return true 
-    else 
-      return false
-    end
-  end 
   
   main()
   
   #for syntax issues raise some errors that can be dealt with in the CLI loop
+  #todo move validate file to request? 
