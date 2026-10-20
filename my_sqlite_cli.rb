@@ -120,7 +120,7 @@ def parse_tokens(tokens, request)
       result = where(current_command, parsing_stage, request, tokens, index)
       index = result 
       parsing_stage = 'WHERE'
-#DONE
+      #DONE
     when 'FROM'
       result = from(current_command, parsing_stage, request, tokens, index)
       index = result 
@@ -132,27 +132,24 @@ def parse_tokens(tokens, request)
       result = join(current_command, parsing_stage, request, tokens, index)
       index = result 
       parsing_stage = 'JOIN'
-
-      #todo change error path to raise exception instead
+      
+      #DONE
     when 'UPDATE'
       result = update(current_command, request, tokens, index)
-      return false if result == false 
       index = result 
       current_command = 'UPDATE'
       parsing_stage = 'UPDATE'
-
-      #todo change error path to raise exception instead
+      #DONE
     when 'INSERT'
       result = insert(current_command, request, tokens, index)
       return false if result == false 
       index = result
       current_command = 'INSERT'
       parsing_stage = 'INSERT'
-
+      
       #todo change error path to raise exception instead
     when 'SET'
       result = set(current_command, request, tokens, index)
-      return false if result == false 
       index = result
       parsing_stage = 'SET'
       
@@ -170,7 +167,7 @@ def parse_tokens(tokens, request)
       return false if result == false 
       index = result
       parsing_stage = 'ORDER'
-
+      
       #todo change error path to raise exception instead
     when 'VALUES'
       result = values(current_command, parsing_stage, request, tokens, index)
@@ -261,12 +258,10 @@ def process_update(request, tokens, index )
   if tokens[index] == 'UPDATE'
     index += 1
   else 
-    puts 'Expected: UPDATE'
-    return false
+    raise ArgumentError, "Expected: UPDATE"
   end 
   
-  return false unless is_valid_data(tokens[index])
-  
+  raise ArgumentError, "Invalid UPDATE value" unless is_valid_data(tokens[index])
   request.update(tokens[index])
   index += 1
   
@@ -277,15 +272,13 @@ def process_set(request, tokens, index)
   if tokens[index] == 'SET' && tokens[index + 1] != ','
     index += 1 
   else 
-    puts 'Expected: SET <value name>'
-    return false
+    raise ArgumentError, "Expected: SET <value name>"
   end 
   
-  return false unless is_valid_data(tokens[index])
-  
+  raise ArgumentError, "Invalid SET value" unless is_valid_data(tokens[index])
+
   set_values = {}
   result = collect_data_values(set_values, tokens, index)
-  return false if result == false
   request.set(set_values)
   index = result 
   index
@@ -295,12 +288,11 @@ def process_insert(request, tokens, index)
   if tokens[index] == 'INSERT' && tokens[index + 1] == 'INTO'
     index += 2
   else 
-    puts 'Usage: INSERT INTO'
-    return false
+    raise ArgumentError, "Expected INSERT INTO"
   end 
   
   if !is_valid_data(tokens[index]) || tokens[index + 1] != 'VALUES'
-    return false 
+    raise ArgumentError, "Invalid INSERT value, expected: INSERT INTO <file_name> VALUES ()"
   else 
     request.insert(tokens[index])
     index += 1 
@@ -398,7 +390,6 @@ end
 
 def valid_word_format(input)
   if !input.start_with?("'") || !input.end_with?("'")
-    puts 'values after = must be surrounded by single quotes'
     return false 
   else 
     return true 
@@ -423,7 +414,7 @@ def collect_data_values(set_values,tokens, index)
   while tokens[index] != 'WHERE' && tokens[index] != ';'
     #collect the data into a hash 
     if tokens[index].nil? 
-      return false
+      raise ArgumentError, "Value #{tokens[index]} = nil"
     end
     
     if tokens[index] == ','
@@ -431,11 +422,11 @@ def collect_data_values(set_values,tokens, index)
     end 
     
     if tokens[index + 1 ] != '='
-      puts 'Expected; Column = value'
-      return false
+      raise ArgumentError, "Expected <column name> = <value>"
     end 
-    return false unless is_valid_data(tokens[index + 2])
-    return false unless valid_word_format(tokens[index + 2])
+
+    raise ArgumentError, "Invalid SET value #{tokens[index + 2]}" unless is_valid_data(tokens[index + 2])
+    raise ArgumentError, "values after = must be surrounded by single quotes" unless valid_word_format(tokens[index + 2])
     
     set_values[tokens[index]] = tokens[index + 2].delete_prefix("'").delete_suffix("'")
     index += 3
@@ -451,7 +442,7 @@ def is_valid_data(position)
     return true
   end 
 end 
- 
+
 def valid_select_column?(token)
   invalid = ['WHERE', 'ORDER', 'JOIN', 'UPDATE', 'DELETE', 'INSERT', 'SET', 'VALUES']
   !invalid.include?(token)
@@ -498,30 +489,21 @@ end
 def update(current_command, request, tokens, index)
   if current_command.nil? 
     result = process_update(request, tokens, index)
-    return false if result == false 
     result 
-  else 
-    return false
   end 
 end 
 
 def insert(current_command, request, tokens, index)
   if current_command.nil? 
     result = process_insert(request, tokens, index)
-    return false if result == false
     result
-  else 
-    return false 
   end 
 end 
 
 def set(current_command, request, tokens, index)
   if current_command == 'UPDATE'
     result = process_set(request, tokens, index)
-    return false if result == false
     result
-  else 
-    return false 
   end 
 end 
 
