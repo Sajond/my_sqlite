@@ -108,53 +108,58 @@ def parse_tokens(tokens, request)
   
   while index < tokens.length
     case tokens[index]
-      
+      #todo change error path to raise exception instead
     when 'SELECT'
       result = select(current_command, request, tokens, index)
-      return false if result == false 
       current_command = 'SELECT'
       parsing_stage = 'SELECT'
       index = result
       
+      #DONE
     when 'WHERE'
       result = where(current_command, parsing_stage, request, tokens, index)
       index = result 
       parsing_stage = 'WHERE'
-      
+
+      #todo change error path to raise exception instead
     when 'FROM'
       result = from(current_command, parsing_stage, request, tokens, index)
       return false if result == false 
       index = result 
       parsing_stage = 'FROM'
       
+      #todo change error path to raise exception instead
     when 'JOIN'
       #JOIN table ON column_ a = column_b (only comes from SELECT)
       result = join(current_command, parsing_stage, request, tokens, index)
       return false if result == false 
       index = result 
       parsing_stage = 'JOIN'
-      
+
+      #todo change error path to raise exception instead
     when 'UPDATE'
       result = update(current_command, request, tokens, index)
       return false if result == false 
       index = result 
       current_command = 'UPDATE'
       parsing_stage = 'UPDATE'
-      
+
+      #todo change error path to raise exception instead
     when 'INSERT'
       result = insert(current_command, request, tokens, index)
       return false if result == false 
       index = result
       current_command = 'INSERT'
       parsing_stage = 'INSERT'
-      
+
+      #todo change error path to raise exception instead
     when 'SET'
       result = set(current_command, request, tokens, index)
       return false if result == false 
       index = result
       parsing_stage = 'SET'
       
-      
+      #todo change error path to raise exception instead
     when 'DELETE'
       result = delete(current_command, request, tokens, index)
       return false if result == false 
@@ -162,12 +167,14 @@ def parse_tokens(tokens, request)
       current_command = 'DELETE'
       parsing_stage = 'DELETE'
       
+      #todo change error path to raise exception instead
     when 'ORDER' #by is +1 index
       result = order(current_command, parsing_stage, request, tokens, index)
       return false if result == false 
       index = result
       parsing_stage = 'ORDER'
-      
+
+      #todo change error path to raise exception instead
     when 'VALUES'
       result = values(current_command, parsing_stage, request, tokens, index)
       return false if result == false 
@@ -188,22 +195,21 @@ end
 
 #---------------------------------------------PROCESS COMMAND METHODS & HELPERS ---------------------------
 
-
+#TODOD FINISH THIS TO RAISE EXCEPTION
 def process_select(request, tokens, index)
   column_names = []
   index += 1 
   if tokens[index] == 'FROM'
-    puts 'Select value invalid'
-    return false 
+    raise ArgumentError, "Expected: SELECT <column_name> FROM <file>"
   end 
   
   while tokens[index] != 'FROM'
     if tokens[index] == ','
       #do nothing
-    elsif tokens[index].nil? || tokens[index] == ';'
-      return false
+    elsif is_valid_data(tokens[index]) != true
+      raise ArgumentError "Expected: SELECT <column_name> FROM <file>"
     else
-      return false unless valid_select_column?(tokens[index])
+      raise ArgumentError, "Invalid SELECT column: #{tokens[index]}" unless valid_select_column?(tokens[index])
       column_names << tokens[index]
     end 
     index += 1
@@ -307,7 +313,6 @@ def process_insert(request, tokens, index)
   index
 end 
 
-#todo this must collect a hash not an array
 def process_values(request, tokens, index)
   #cuyrrent index VALUES -1 = table name 
   table_name = tokens[index - 1]
@@ -463,10 +468,9 @@ end
 def select(current_command, request, tokens, index)
   if current_command.nil? 
     result = process_select(request, tokens, index)
-    return false if result == false 
     result
   else 
-    return false
+    raise ArgumentError, "SELECT must always be first argument if called"
   end 
 end
 
