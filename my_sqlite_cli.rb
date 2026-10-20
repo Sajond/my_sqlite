@@ -41,7 +41,6 @@ def cli_loop()
       tokens = tokenise_input(input)
       request = build_request()
       
-      #todo parse tokens no longer needs a true/false check BUT we need to change returning false to propogate errors
       parse_tokens(tokens, request)
     
       result = request.run
@@ -96,7 +95,6 @@ def build_request()
   request = MySqliteRequest.new
 end 
 #---------------------------------------------PARSER (TOKENS)---------------------------
-#todo Add handle for non accepted tokens
 def parse_tokens(tokens, request)
   index = 0
   current_command = nil #SELECT, UPD, DEL 
@@ -108,7 +106,6 @@ def parse_tokens(tokens, request)
   
   while index < tokens.length
     case tokens[index]
-      #todo DONE
     when 'SELECT'
       result = select(current_command, request, tokens, index)
       current_command = 'SELECT'
