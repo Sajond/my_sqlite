@@ -169,7 +169,6 @@ def parse_tokens(tokens, request)
       #todo change error path to raise exception instead
     when 'VALUES'
       result = values(current_command, parsing_stage, request, tokens, index)
-      return false if result == false 
       index = result
       parsing_stage = 'VALUES'
       
@@ -305,14 +304,13 @@ def process_values(request, tokens, index)
   if tokens[index] == 'VALUES' && tokens[index + 1] == '('
     index += 1 #pointing now to (
   else 
-    puts 'Expected: VALUES ( '
-    return false
+    raise ArgumentError, "Expected: VALUES ( "
   end 
-  return false if tokens[index] == nil || tokens[index] == ';'
+  raise ArgumentError, "Invalid VALUES data: #{tokens[index]}" if is_valid_data(tokens[index]) != true
+  
   
   values = []
   result = collect_insert_values(values, tokens, index)
-  return false if result == false 
   
   #match headers to collected data
   headers = CSV.foreach(table_name).first
@@ -393,9 +391,7 @@ end
 
 def collect_insert_values(values, tokens, index)
   while tokens[index] != ')'
-    if tokens[index] == nil || tokens[index] == ';'
-      return false
-    end 
+    raise ArgumentError, "Invalid VALUES data: #{tokens[index]}" if is_valid_data(tokens[index]) != true
     
     if tokens[index] != '(' && tokens[index] != ','
       values << tokens[index].delete_prefix("'").delete_suffix("'").delete_prefix('"').delete_suffix('"')
@@ -532,10 +528,9 @@ end
 def values(current_command, parsing_stage, request, tokens, index)
   if current_command == 'INSERT' && parsing_stage == 'INSERT'
     result = process_values(request, tokens, index)
-    return false if result == false 
     result
   else 
-    return false
+    raise ArgumentError, "VALUES can only be called after INSERT."
   end 
 end 
 
