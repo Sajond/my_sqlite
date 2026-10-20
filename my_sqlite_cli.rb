@@ -153,17 +153,16 @@ def parse_tokens(tokens, request)
       index = result
       parsing_stage = 'SET'
       
-      #todo change error path to raise exception instead
+      #DONE
     when 'DELETE'
       result = delete(current_command, request, tokens, index)
       index = result
       current_command = 'DELETE'
       parsing_stage = 'DELETE'
       
-      #todo change error path to raise exception instead
+      #DONE
     when 'ORDER' #by is +1 index
       result = order(current_command, parsing_stage, request, tokens, index)
-      return false if result == false 
       index = result
       parsing_stage = 'ORDER'
       
@@ -334,13 +333,12 @@ def process_order(request, tokens, index)
   if tokens[index] == 'ORDER' && tokens[index + 1] == 'BY'
     index +=2 
   else 
-    puts 'Expected: ORDER BY <column name> <ASC/DESC>'
-    return false
+    raise ArgumentError, "Expected: ORDER BY <column name> <ASC/DESC>"
   end 
   
   #checks column name 
-  if tokens[index] == nil || tokens[index] == ';'
-    return false
+  if is_valid_data(tokens[index]) != true
+    raise ArgumentError, "Column name; #{tokens[index]} is invalid"
   else 
     column_name = tokens[index]
     index +=1
@@ -351,8 +349,7 @@ def process_order(request, tokens, index)
   elsif tokens[index] == 'DESC'
     order_direction = :desc
   else 
-    puts 'Expected: ORDER BY <column name> <ASC/DESC>'
-    return false
+    raise ArgumentError, "Expected: ORDER BY <column name> <ASC/DESC>"
   end 
   
   request.order(order_direction, column_name); 
@@ -462,7 +459,6 @@ def where(current_command, parsing_stage, request, tokens, index)
     (current_command == 'SELECT' && parsing_stage == 'JOIN') ||
     (current_command == 'UPDATE' && parsing_stage == 'SET')
     result = process_where(request, tokens, index)
-    return false if result == false
     result
   else 
     raise ArgumentError, "WHERE cannot be called after preceding/no command."
@@ -474,6 +470,8 @@ def from(current_command, parsing_stage, request, tokens, index)
     parsing_stage == current_command 
     result = process_from(request, tokens, index)
     result
+  else 
+    raise ArgumentError, "FROM can only be called after SELECT/DELETE."
   end 
 end 
 
@@ -481,6 +479,8 @@ def join(current_command, parsing_stage, request, tokens, index)
   if current_command == 'SELECT' && parsing_stage == 'FROM'
     result = process_join(request, tokens, index)
     result
+  else 
+    raise ArgumentError, "JOIN must be called after SELECT/FROM"
   end 
 end 
 
@@ -488,6 +488,8 @@ def update(current_command, request, tokens, index)
   if current_command.nil? 
     result = process_update(request, tokens, index)
     result 
+  else 
+    raise ArgumentError, "UPDATE must be first command in request."
   end 
 end 
 
@@ -495,6 +497,8 @@ def insert(current_command, request, tokens, index)
   if current_command.nil? 
     result = process_insert(request, tokens, index)
     result
+  else 
+    raise ArgumentError, "INSERT must be first command in request."
   end 
 end 
 
@@ -502,6 +506,8 @@ def set(current_command, request, tokens, index)
   if current_command == 'UPDATE'
     result = process_set(request, tokens, index)
     result
+  else 
+    raise ArgumentError, "SET must follow UPDATE in request."
   end 
 end 
 
@@ -509,16 +515,17 @@ def delete(current_command, request, tokens, index)
   if current_command.nil? 
     result = process_delete(request, tokens, index)
     result
+  else 
+    raise ArgumentError, "DELETE must be first command in request."
   end 
 end 
 
 def order(current_command, parsing_stage, request, tokens, index)
   if current_command == 'SELECT' && (parsing_stage == 'FROM' || parsing_stage == 'WHERE' || parsing_stage == 'JOIN')
     result = process_order(request, tokens, index)
-    return false if result == false
     result
   else 
-    return false
+    raise ArgumentError, "ORDER can only be called from SELECT command and after FROM/WHERE/JOIN"
   end 
 end 
 
