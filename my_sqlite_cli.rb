@@ -105,6 +105,9 @@ def parse_tokens(tokens, request)
   current_command = nil #SELECT, UPD, DEL 
   parsing_stage = nil
   
+  if !validate_first_token(tokens[index])
+    raise ArgumentError, "request must begin with: SELECT, UPDATE, INSERT or DELETE"
+  end 
   
   while index < tokens.length
     case tokens[index]
@@ -115,31 +118,27 @@ def parse_tokens(tokens, request)
       parsing_stage = 'SELECT'
       index = result
       
-      #DONE
     when 'WHERE'
       result = where(current_command, parsing_stage, request, tokens, index)
       index = result 
       parsing_stage = 'WHERE'
-      #DONE
+
     when 'FROM'
       result = from(current_command, parsing_stage, request, tokens, index)
       index = result 
       parsing_stage = 'FROM'
       
-      #todo change error path to raise exception instead
     when 'JOIN'
       #JOIN table ON column_ a = column_b (only comes from SELECT)
       result = join(current_command, parsing_stage, request, tokens, index)
       index = result 
       parsing_stage = 'JOIN'
       
-      #DONE
     when 'UPDATE'
       result = update(current_command, request, tokens, index)
       index = result 
       current_command = 'UPDATE'
       parsing_stage = 'UPDATE'
-      #DONE
     when 'INSERT'
       result = insert(current_command, request, tokens, index)
       return false if result == false 
@@ -147,26 +146,22 @@ def parse_tokens(tokens, request)
       current_command = 'INSERT'
       parsing_stage = 'INSERT'
       
-      #DONE
     when 'SET'
       result = set(current_command, request, tokens, index)
       index = result
       parsing_stage = 'SET'
       
-      #DONE
     when 'DELETE'
       result = delete(current_command, request, tokens, index)
       index = result
       current_command = 'DELETE'
       parsing_stage = 'DELETE'
       
-      #DONE
     when 'ORDER' #by is +1 index
       result = order(current_command, parsing_stage, request, tokens, index)
       index = result
       parsing_stage = 'ORDER'
       
-      #todo change error path to raise exception instead
     when 'VALUES'
       result = values(current_command, parsing_stage, request, tokens, index)
       index = result
@@ -184,6 +179,10 @@ def parse_tokens(tokens, request)
   true 
 end 
 
+def validate_first_token(first_token)
+  valid = ['DELETE', 'SELECT', 'INSERT', 'UPDATE']
+  valid.include?(first_token)
+end 
 #---------------------------------------------PROCESS COMMAND METHODS & HELPERS ---------------------------
 
 def process_select(request, tokens, index)
