@@ -108,7 +108,7 @@ def parse_tokens(tokens, request)
   
   while index < tokens.length
     case tokens[index]
-      #todo change error path to raise exception instead
+      #todo DONE
     when 'SELECT'
       result = select(current_command, request, tokens, index)
       current_command = 'SELECT'
@@ -124,7 +124,6 @@ def parse_tokens(tokens, request)
       #todo change error path to raise exception instead
     when 'FROM'
       result = from(current_command, parsing_stage, request, tokens, index)
-      return false if result == false 
       index = result 
       parsing_stage = 'FROM'
       
@@ -207,7 +206,7 @@ def process_select(request, tokens, index)
     if tokens[index] == ','
       #do nothing
     elsif is_valid_data(tokens[index]) != true
-      raise ArgumentError "Expected: SELECT <column_name> FROM <file>"
+      raise ArgumentError, "Expected: SELECT <column_name> FROM <file>"
     else
       raise ArgumentError, "Invalid SELECT column: #{tokens[index]}" unless valid_select_column?(tokens[index])
       column_names << tokens[index]
@@ -222,8 +221,7 @@ def process_from(request, tokens, index)
   if tokens[index] == 'FROM'
     index += 1
   else 
-    puts 'Expected FROM'
-    return false
+    raise ArgumentError, "Expected FROM" 
   end 
   
   request.from(tokens[index])
@@ -490,11 +488,7 @@ def from(current_command, parsing_stage, request, tokens, index)
   if (current_command == 'SELECT' || current_command == 'DELETE')  && 
     parsing_stage == current_command 
     result = process_from(request, tokens, index)
-    return false if result == false 
     result
-    
-  else 
-    return false 
   end 
 end 
 
@@ -571,5 +565,3 @@ end
 
 main()
 
-#for syntax issues raise some errors that can be dealt with in the CLI loop
-#todo move validate file to request? 
