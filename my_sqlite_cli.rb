@@ -42,11 +42,8 @@ def cli_loop()
       request = build_request()
       
       #todo parse tokens no longer needs a true/false check BUT we need to change returning false to propogate errors
-      success = parse_tokens(tokens, request)
-      if success != true 
-        puts 'Parsing failed'
-        next 
-      end 
+      parse_tokens(tokens, request)
+    
       result = request.run
       
     rescue ArgumentError => e 
@@ -176,7 +173,6 @@ def parse_tokens(tokens, request)
       break 
     end 
   end 
-  true 
 end 
 
 def validate_first_token(first_token)
