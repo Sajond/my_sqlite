@@ -120,8 +120,7 @@ def parse_tokens(tokens, request)
       result = where(current_command, parsing_stage, request, tokens, index)
       index = result 
       parsing_stage = 'WHERE'
-
-      #todo change error path to raise exception instead
+#DONE
     when 'FROM'
       result = from(current_command, parsing_stage, request, tokens, index)
       index = result 
@@ -131,7 +130,6 @@ def parse_tokens(tokens, request)
     when 'JOIN'
       #JOIN table ON column_ a = column_b (only comes from SELECT)
       result = join(current_command, parsing_stage, request, tokens, index)
-      return false if result == false 
       index = result 
       parsing_stage = 'JOIN'
 
@@ -194,7 +192,6 @@ end
 
 #---------------------------------------------PROCESS COMMAND METHODS & HELPERS ---------------------------
 
-#TODOD FINISH THIS TO RAISE EXCEPTION
 def process_select(request, tokens, index)
   column_names = []
   index += 1 
@@ -378,19 +375,18 @@ def process_join(request, tokens, index)
   if tokens[index] == 'JOIN' && tokens[index + 2] == 'ON' && tokens[index + 4] == '='
     index += 1 
   else 
-    puts 'USAGE: JOIN <table_name_b> ON <column_db_a> = <column_db_b>'
-    return false
+    raise ArgumentError, "USAGE: JOIN <table_name_b> ON <column_db_a> = <column_db_b>"
   end 
   
-  return false unless is_valid_data(tokens[index])
+  raise ArgumentError, "Invalid JOIN value" unless is_valid_data(tokens[index])
   table_name_b = tokens[index]
   index += 2 
   
-  return false unless is_valid_data(tokens[index])
+  raise ArgumentError, "Invalid JOIN value" unless is_valid_data(tokens[index])
   column_db_a = tokens[index]
   index += 2
   
-  return false unless is_valid_data(tokens[index])
+  raise ArgumentError, "Invalid JOIN value" unless is_valid_data(tokens[index])
   column_db_b = tokens[index]
   index += 1
   
@@ -495,10 +491,7 @@ end
 def join(current_command, parsing_stage, request, tokens, index)
   if current_command == 'SELECT' && parsing_stage == 'FROM'
     result = process_join(request, tokens, index)
-    return false if result == false
     result
-  else 
-    return false 
   end 
 end 
 
