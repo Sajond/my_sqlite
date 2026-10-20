@@ -99,7 +99,7 @@ def build_request()
   request = MySqliteRequest.new
 end 
 #---------------------------------------------PARSER (TOKENS)---------------------------
-
+#todo Add handle for non accepted tokens
 def parse_tokens(tokens, request)
   index = 0
   current_command = nil #SELECT, UPD, DEL 
@@ -147,7 +147,7 @@ def parse_tokens(tokens, request)
       current_command = 'INSERT'
       parsing_stage = 'INSERT'
       
-      #todo change error path to raise exception instead
+      #DONE
     when 'SET'
       result = set(current_command, request, tokens, index)
       index = result
@@ -156,7 +156,6 @@ def parse_tokens(tokens, request)
       #todo change error path to raise exception instead
     when 'DELETE'
       result = delete(current_command, request, tokens, index)
-      return false if result == false 
       index = result
       current_command = 'DELETE'
       parsing_stage = 'DELETE'
@@ -248,8 +247,7 @@ def valid_where_syntax(tokens, index)
 end 
 
 def process_delete(request, tokens, index)
-  return false if tokens[index] != 'DELETE'
-  return false if tokens[index + 1] != 'FROM'
+  raise ArgumentError, "Expected DELETE FROM" if tokens[index] != 'DELETE' || tokens[index + 1] != 'FROM'
   request.delete
   index + 1
 end 
@@ -276,7 +274,7 @@ def process_set(request, tokens, index)
   end 
   
   raise ArgumentError, "Invalid SET value" unless is_valid_data(tokens[index])
-
+  
   set_values = {}
   result = collect_data_values(set_values, tokens, index)
   request.set(set_values)
@@ -424,7 +422,7 @@ def collect_data_values(set_values,tokens, index)
     if tokens[index + 1 ] != '='
       raise ArgumentError, "Expected <column name> = <value>"
     end 
-
+    
     raise ArgumentError, "Invalid SET value #{tokens[index + 2]}" unless is_valid_data(tokens[index + 2])
     raise ArgumentError, "values after = must be surrounded by single quotes" unless valid_word_format(tokens[index + 2])
     
@@ -510,10 +508,7 @@ end
 def delete(current_command, request, tokens, index)
   if current_command.nil? 
     result = process_delete(request, tokens, index)
-    return false if result == false 
     result
-  else 
-    return false
   end 
 end 
 
